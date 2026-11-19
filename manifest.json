@@ -1,0 +1,18 @@
+{
+  "name": "Kwaliteitshandboek Monumentaal Schilderwerk",
+  "short_name": "Kwaliteitshandboek",
+  "description": "Kwaliteitshandboek en ERM-updates voor monumentaal schilderwerk - PlenderWestendorp",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#DDDDDD",
+  "theme_color": "#111111",
+  "icons": [
+    {
+      "src": "icoon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
