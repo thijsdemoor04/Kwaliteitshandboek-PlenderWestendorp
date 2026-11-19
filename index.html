@@ -10,8 +10,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Kwaliteitshandboek">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" href="icoon.png">
-<link rel="apple-touch-icon" href="icoon.png">
+<link rel="icon" type="image/png" href="PlenderWestendorp_512x512_wit.png">
+<link rel="apple-touch-icon" href="PlenderWestendorp_512x512_wit.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
@@ -92,6 +92,7 @@ nav button.on{background:#111 !important;background-image:linear-gradient(#111,#
 </div>
 <script>
 var ERM_API = "https://erm-updates.thijsdemoor.workers.dev";
+var SYNC_API = ""; // Vul hier eventueel een gedeelde GET/POST-endpoint in zodat iedereen wijzigingen ziet
 
 var D=[
 {c:"1. Introductie",t:["1. Introductie"]},
@@ -113,13 +114,57 @@ var K=[
 ["t","URL’s (zoals URL 4009): regels voor het werk","Een URL (Uitvoeringsrichtlijn) gaat over het werk op de bouwplaats zelf. Voor schilderwerk is dat URL 4009. Zo blijft het verschil duidelijk tussen de kwaliteit van het bedrijf (BRL) en de kwaliteit van het schilderwerk (URL)."]]}];
 
 var KEY="cobalt_kwaliteit_status_v3",ERM_CACHE_KEY="cobalt_erm_cache_v1",ERM_SEEN_KEY="cobalt_erm_seen_v1";
-var S={},view="d",ch=0,ar=0,ermFilter="rel",rsArmed=false,rsTimer=null;
+var S={},view="d",ch=0,ar=0,ermFilter="rel",rsArmed=false,rsTimer=null,syncStatus="";
 var ermState={loading:false,error:null,data:null,offline:false,newCount:0,changedCodes:{}};
 
 try{S=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){}
 try{ermState.data=JSON.parse(localStorage.getItem(ERM_CACHE_KEY))||null}catch(e){}
 
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function hasSync(){return typeof SYNC_API==="string"&&/^https?:\/\//i.test(SYNC_API.trim())}
+
+function save(){
+  saveLocal();
+  if(!hasSync())return;
+  syncStatus="Opslaan…";
+  fetch(SYNC_API.trim(),{
+    method:"POST",
+    cache:"no-store",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({statuses:S,updatedAt:new Date().toISOString()})
+  }).then(function(res){
+    if(!res.ok)throw new Error("HTTP "+res.status);
+    syncStatus="Gedeeld opgeslagen";
+    render();
+  }).catch(function(){
+    syncStatus="Alleen lokaal opgeslagen (geen sync-verbinding)";
+    render();
+  });
+}
+
+function loadSharedStatuses(silent){
+  if(!hasSync())return Promise.resolve();
+  if(!silent){syncStatus="Synchroniseren…";render()}
+  return fetch(SYNC_API.trim()+(SYNC_API.indexOf("?")===-1?"?":"&")+"_t="+Date.now(),{
+    cache:"no-store"
+  }).then(function(res){
+    if(!res.ok)throw new Error("HTTP "+res.status);
+    return res.json();
+  }).then(function(payload){
+    var remote=(payload&&payload.statuses&&typeof payload.statuses==="object")?payload.statuses:payload;
+    if(remote&&typeof remote==="object"){
+      var prev=JSON.stringify(S);
+      var next=JSON.stringify(remote);
+      S=remote;
+      saveLocal();
+      syncStatus="Gedeelde lijst actueel";
+      if(prev!==next)render();
+    }
+  }).catch(function(){
+    if(!silent){syncStatus="Lokale lijst actief";render()}
+  });
+}
+
 function esc(s){return String(s||"").replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function safeUrl(u){return /^https?:\/\//i.test(String(u||""))?u:"https://www.stichtingerm.nl"}
 function fmtTime(iso){if(!iso)return"";var d=new Date(iso);if(isNaN(d))return"";return d.toLocaleDateString("nl-NL")+" om "+d.toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"})}
@@ -157,8 +202,9 @@ function loadErm(force){
   if(!isConfigured())return;
   ermState.loading=true;ermState.error=null;ermState.offline=false;
   if(view=="k"&&ar===0)render();
-  var url=ERM_API.replace(/\/+$/,"")+(force?"?refresh=1":"");
-  fetch(url).then(function(res){
+  var sep=force?"?refresh=1&":"?";
+  var url=ERM_API.replace(/\/+$/,"")+sep+"_t="+Date.now();
+  fetch(url,{cache:"no-store"}).then(function(res){
     if(!res.ok)throw new Error("HTTP "+res.status);
     return res.json();
   }).then(function(data){
@@ -192,14 +238,16 @@ function nav(){
 
 function dash(){var T={done:0,busy:0,todo:0},n=0;D.forEach(function(_,i){var r=cnt(i);for(var k in r){T[k]+=r[k];n+=r[k]}});
 var p=Math.round(T.done/n*100);
-return '<div class="sum"><div><div class="big">'+p+'%</div><div class="mic" style="margin-top:6px">van het handboek afgerond</div></div>'+
+var syncInfo=syncStatus?'<div class="sub" style="margin-bottom:14px">'+esc(syncStatus)+'</div>':"";
+return syncInfo+'<div class="sum"><div><div class="big">'+p+'%</div><div class="mic" style="margin-top:6px">van het handboek afgerond</div></div>'+
 [["done","Afgerond"],["busy","Bezig"],["todo","Te doen"]].map(function(x){return '<div class="it"><b>'+T[x[0]]+'</b><span><i class="dot" style="background:var(--'+x[0]+')"></i>'+x[1]+'</span></div>'}).join("")+'</div>'+
 '<div class="dg">'+D.map(function(d,i){var r=cnt(i),m=d.t.length;return '<button class="dc" data-c="'+i+'"><h3 class="h2">'+d.c+'</h3><div class="row"><div class="pie" style="background:'+pie(r,m)+'"></div><div class="lg">'+lg(r)+'</div></div><span class="go">Naar afvinklijst →</span></button>'}).join("")+'</div>'+
 '<button class="rs'+(rsArmed?' armed':'')+'" id="rs">'+(rsArmed?'Zeker weten? Klik nogmaals om alles te resetten':'Alle statussen terugzetten')+'</button>'}
 
 function chk(){var d=D[ch],r=cnt(ch);
 var m='<div class="menu">'+D.map(function(x,i){var q=cnt(i);return '<button data-c="'+i+'" class="'+(i==ch?"on":"")+'">'+x.c+'<small>'+q.done+' / '+x.t.length+' afgerond</small></button>'}).join("")+'</div>';
-return '<div class="lay">'+m+'<div class="main"><h2 class="h2">'+d.c+'</h2><p class="sub">'+r.done+' afgerond · '+r.busy+' bezig · '+r.todo+' te doen</p>'+
+var subTxt=r.done+' afgerond · '+r.busy+' bezig · '+r.todo+' te doen'+(syncStatus?' · '+syncStatus:'');
+return '<div class="lay">'+m+'<div class="main"><h2 class="h2">'+d.c+'</h2><p class="sub">'+esc(subTxt)+'</p>'+
 d.t.map(function(t,j){var s=S[sid(ch,j)]||"todo";return '<div class="ci '+(s=="done"?"done":"")+'"><select data-s="'+sid(ch,j)+'" style="border-color:'+(s=="done"?"var(--done)":s=="busy"?"var(--busy)":"#111")+'"><option value="todo"'+(s=="todo"?" selected":"")+'>Te doen</option><option value="busy"'+(s=="busy"?" selected":"")+'>Bezig</option><option value="done"'+(s=="done"?" selected":"")+'>Afgerond</option></select><div><span class="no">Taak '+String(j+1).padStart(2,"0")+'</span><span class="tx">'+t+'</span></div></div>'}).join("")+'</div></div>'}
 
 function ermLive(){
@@ -212,7 +260,7 @@ function ermLive(){
   }
   if(ermState.data){
     var rl=ermState.data.richtlijnen||[];
-    out+='<div class="sec">Actuele richtlijnen (live van stichtingerm.nl)</div><div class="rg">'+
+    out+='<div class="sec">Actuele richtlijnen &amp; monumenten (live van stichtingerm.nl)</div><div class="rg">'+
       rl.map(function(r){
         var isNew=ermState.changedCodes[r.code];
         return '<div class="rc"><span class="tag inv">'+esc(r.code)+'</span>'+(isNew?'<span class="tag new">Nieuwe versie</span>':'')+
@@ -252,11 +300,11 @@ a.b.map(function(b,i){return '<div class="bl '+b[0]+'" id="bl-'+i+'"><span class
 '<button class="back" data-v="a">← Terug naar afvinklijst</button></div></div>'}
 
 function render(){nav();document.getElementById("v").innerHTML=view=="d"?dash():view=="a"?chk():kc()}
-function go(v){rsArmed=false;clearTimeout(rsTimer);view=v;if(v=="k"&&ar===0)markErmSeen();render();window.scrollTo(0,0)}
+function go(v){rsArmed=false;clearTimeout(rsTimer);view=v;if(v=="k"&&ar===0)markErmSeen();render();loadSharedStatuses(true);window.scrollTo(0,0)}
 
 document.addEventListener("click",function(e){var t=e.target.closest("button");if(!t)return;var d=t.dataset;
 if(t.id=="home")return go("d");
-if(t.id=="erm-ref")return loadErm(true);
+if(t.id=="erm-ref"){loadSharedStatuses(false);return loadErm(true)}
 if(t.id=="rs"){
   if(rsArmed){
     clearTimeout(rsTimer);rsArmed=false;S={};
@@ -277,7 +325,12 @@ document.getElementById("home").addEventListener("click",function(){go("d")});
 document.addEventListener("change",function(e){var s=e.target.dataset.s;if(!s)return;S[s]=e.target.value;save();render()});
 
 render();
+loadSharedStatuses(false);
 loadErm(false);
+
+if(hasSync()){
+  setInterval(function(){if(document.visibilityState==="visible")loadSharedStatuses(true)},15000);
+}
 
 if("serviceWorker" in navigator){
   window.addEventListener("load",function(){
