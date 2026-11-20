@@ -138,7 +138,8 @@ nav button.on{background:#111 !important;background-image:linear-gradient(#111,#
 </div>
 <script>
 var ERM_API = "https://erm-updates.thijsdemoor.workers.dev";
-var SYNC_API = "https://cloud-monumentaal-sync.thijsdemoor.workers.dev";
+var SYNC_BINDING = "CLOUD_WIJZIGINGEN_GEBRUIKER";
+var SYNC_API = "https://cloudwijzigingengebruiker.thijsdemoor.workers.dev";
 
 var D=[
 {c:"1. Introductie",t:["1. Introductie"]},
@@ -209,7 +210,7 @@ function save(){
     method:"POST",
     cache:"no-store",
     headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({statuses:S,logs:L,updatedAt:lastUpdatedAt})
+    body:JSON.stringify({binding:SYNC_BINDING,statuses:S,logs:L,updatedAt:lastUpdatedAt})
   }).then(function(res){
     if(!res.ok)throw new Error("HTTP "+res.status);
     return res.json().catch(function(){return {}});
@@ -229,7 +230,8 @@ function loadSharedStatuses(silent){
   if(!hasSync())return Promise.resolve();
   if(savingInFlight)return Promise.resolve();
   if(!silent){syncStatus="Synchroniseren…";render()}
-  return fetch(SYNC_API.trim()+(SYNC_API.indexOf("?")===-1?"?":"&")+"_t="+Date.now(),{
+  var sep=SYNC_API.indexOf("?")===-1?"?":"&";
+  return fetch(SYNC_API.trim()+sep+"binding="+encodeURIComponent(SYNC_BINDING)+"&_t="+Date.now(),{
     cache:"no-store"
   }).then(function(res){
     if(!res.ok)throw new Error("HTTP "+res.status);
