@@ -92,7 +92,7 @@ nav button.on{background:#111 !important;background-image:linear-gradient(#111,#
 </div>
 <script>
 var ERM_API = "https://erm-updates.thijsdemoor.workers.dev";
-var SYNC_API = ""; // Vul hier eventueel een gedeelde GET/POST-endpoint in zodat iedereen wijzigingen ziet
+var SYNC_API = "https://cloud-monumentaal-sync.thijsdemoor.workers.dev";
 
 var D=[
 {c:"1. Introductie",t:["1. Introductie"]},
@@ -113,37 +113,55 @@ var K=[
 ["e","BRL 4000: regels voor het bedrijf","De BRL 4000 beschrijft waar een bedrijf aan moet voldoen om een certificaat te krijgen. Er wordt onder andere gekeken naar de opleiding van medewerkers, aantoonbare ervaring met monumenten, vaste werkafspraken, eigen controles en een goede administratie (zoals dit kwaliteitshandboek)."],
 ["t","URL’s (zoals URL 4009): regels voor het werk","Een URL (Uitvoeringsrichtlijn) gaat over het werk op de bouwplaats zelf. Voor schilderwerk is dat URL 4009. Zo blijft het verschil duidelijk tussen de kwaliteit van het bedrijf (BRL) en de kwaliteit van het schilderwerk (URL)."]]}];
 
-var KEY="cobalt_kwaliteit_status_v3",ERM_CACHE_KEY="cobalt_erm_cache_v1",ERM_SEEN_KEY="cobalt_erm_seen_v1";
-var S={},view="d",ch=0,ar=0,ermFilter="rel",rsArmed=false,rsTimer=null,syncStatus="";
+var KEY="cobalt_kwaliteit_status_v3",META_KEY="cobalt_kwaliteit_meta_v1",ERM_CACHE_KEY="cobalt_erm_cache_v1",ERM_SEEN_KEY="cobalt_erm_seen_v1";
+var S={},lastUpdatedAt="",view="d",ch=0,ar=0,ermFilter="rel",rsArmed=false,rsTimer=null,syncStatus="",savingInFlight=false;
 var ermState={loading:false,error:null,data:null,offline:false,newCount:0,changedCodes:{}};
 
 try{S=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){}
+try{lastUpdatedAt=localStorage.getItem(META_KEY)||""}catch(e){}
 try{ermState.data=JSON.parse(localStorage.getItem(ERM_CACHE_KEY))||null}catch(e){}
 
-function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function saveLocal(){
+  try{
+    localStorage.setItem(KEY,JSON.stringify(S));
+    if(lastUpdatedAt)localStorage.setItem(META_KEY,lastUpdatedAt);
+  }catch(e){}
+}
+
 function hasSync(){return typeof SYNC_API==="string"&&/^https?:\/\//i.test(SYNC_API.trim())}
 
 function save(){
+  lastUpdatedAt=new Date().toISOString();
   saveLocal();
-  if(!hasSync())return;
-  syncStatus="Opslaan…";
+  if(!hasSync()){
+    syncStatus="Alleen lokaal opgeslagen (koppel SYNC_API voor gedeelde weergave)";
+    return;
+  }
+  savingInFlight=true;
+  syncStatus="Opslaan voor alle gebruikers…";
   fetch(SYNC_API.trim(),{
     method:"POST",
     cache:"no-store",
     headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({statuses:S,updatedAt:new Date().toISOString()})
+    body:JSON.stringify({statuses:S,updatedAt:lastUpdatedAt})
   }).then(function(res){
     if(!res.ok)throw new Error("HTTP "+res.status);
-    syncStatus="Gedeeld opgeslagen";
+    return res.json().catch(function(){return {}});
+  }).then(function(resp){
+    if(resp&&resp.updatedAt){lastUpdatedAt=resp.updatedAt;saveLocal();}
+    savingInFlight=false;
+    syncStatus="Gedeeld opgeslagen voor iedereen";
     render();
   }).catch(function(){
-    syncStatus="Alleen lokaal opgeslagen (geen sync-verbinding)";
+    savingInFlight=false;
+    syncStatus="Lokaal opgeslagen — delen mislukt (controleer SYNC_API)";
     render();
   });
 }
 
 function loadSharedStatuses(silent){
   if(!hasSync())return Promise.resolve();
+  if(savingInFlight)return Promise.resolve();
   if(!silent){syncStatus="Synchroniseren…";render()}
   return fetch(SYNC_API.trim()+(SYNC_API.indexOf("?")===-1?"?":"&")+"_t="+Date.now(),{
     cache:"no-store"
@@ -151,14 +169,23 @@ function loadSharedStatuses(silent){
     if(!res.ok)throw new Error("HTTP "+res.status);
     return res.json();
   }).then(function(payload){
+    if(savingInFlight)return;
     var remote=(payload&&payload.statuses&&typeof payload.statuses==="object")?payload.statuses:payload;
+    var remoteTime=(payload&&payload.updatedAt)?payload.updatedAt:"";
     if(remote&&typeof remote==="object"){
-      var prev=JSON.stringify(S);
-      var next=JSON.stringify(remote);
-      S=remote;
-      saveLocal();
-      syncStatus="Gedeelde lijst actueel";
-      if(prev!==next)render();
+      var localMs=lastUpdatedAt?Date.parse(lastUpdatedAt):0;
+      var remoteMs=remoteTime?Date.parse(remoteTime):0;
+      if(!remoteMs||!localMs||remoteMs>=localMs){
+        var prev=JSON.stringify(S);
+        var next=JSON.stringify(remote);
+        S=remote;
+        if(remoteTime)lastUpdatedAt=remoteTime;
+        saveLocal();
+        syncStatus="Gedeelde lijst actueel";
+        if(prev!==next)render();
+      }else{
+        syncStatus="Gedeelde lijst actueel";
+      }
     }
   }).catch(function(){
     if(!silent){syncStatus="Lokale lijst actief";render()}
