@@ -96,9 +96,13 @@ nav button.on{background:#111 !important;background-image:linear-gradient(#111,#
 .login-submit{align-self:flex-start;background:#111 !important;background-image:linear-gradient(#111,#111) !important;color:#DDDDDD !important;border:1.5px solid #111;padding:10px 22px;font-size:14px;font-weight:700;letter-spacing:.03em;cursor:pointer}
 .login-submit:hover{opacity:.88}
 
-/* Wijzigingenlog */
-.log-item{border-top:1px solid var(--faint);padding:12px 0;display:flex;flex-direction:column;gap:4px}
+/* Wijzigingenlog (Outlook-stijl ongelezen / gelezen) */
+.log-item{border-top:1px solid var(--faint);padding:12px 10px;display:flex;flex-direction:column;gap:4px;cursor:pointer;transition:background .15s}
 .log-item:last-child{border-bottom:1px solid var(--faint)}
+.log-item:hover{background:var(--hov)}
+.log-item.unread{border-left:4px solid #111;padding-left:14px;background:rgba(17,17,17,.04)}
+.log-item.read{opacity:.65}
+.log-badge-new{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;background:#111;color:#DDDDDD;margin-right:8px}
 .log-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;font-size:13px;font-weight:700;color:#111}
 .log-date{font-size:12px;opacity:.7;font-weight:600}
 .log-desc{font-size:15px;color:#111}
@@ -140,6 +144,7 @@ nav button.on{background:#111 !important;background-image:linear-gradient(#111,#
 var ERM_API = "https://erm-updates.thijsdemoor.workers.dev";
 var SYNC_BINDING = "CLOUD_WIJZIGINGEN_GEBRUIKER";
 var SYNC_API = "https://cloudwijzigingengebruiker.thijsdemoor.workers.dev";
+var READ_API = "https://wijzigingen-gelezen.thijsdemoor.workers.dev";
 
 var D=[
 {c:"1. Introductie",t:["1. Introductie"]},
@@ -160,12 +165,13 @@ var K=[
 ["e","BRL 4000: regels voor het bedrijf","De BRL 4000 beschrijft waar een bedrijf aan moet voldoen om een certificaat te krijgen. Er wordt onder andere gekeken naar de opleiding van medewerkers, aantoonbare ervaring met monumenten, vaste werkafspraken, eigen controles en een goede administratie (zoals dit kwaliteitshandboek)."],
 ["t","URL’s (zoals URL 4009): regels voor het werk","Een URL (Uitvoeringsrichtlijn) gaat over het werk op de bouwplaats zelf. Voor schilderwerk is dat URL 4009. Zo blijft het verschil duidelijk tussen de kwaliteit van het bedrijf (BRL) en de kwaliteit van het schilderwerk (URL)."]]}];
 
-var KEY="cobalt_kwaliteit_status_v3",META_KEY="cobalt_kwaliteit_meta_v1",ERM_CACHE_KEY="cobalt_erm_cache_v1",ERM_SEEN_KEY="cobalt_erm_seen_v1",USER_KEY="cobalt_kwaliteit_user_v1",LOG_KEY="cobalt_kwaliteit_log_v1";
-var S={},L=[],currentUser="",lastUpdatedAt="",view="d",ch=0,ar=0,ermFilter="rel",rsArmed=false,rsTimer=null,syncStatus="",savingInFlight=false;
+var KEY="cobalt_kwaliteit_status_v3",META_KEY="cobalt_kwaliteit_meta_v1",ERM_CACHE_KEY="cobalt_erm_cache_v1",ERM_SEEN_KEY="cobalt_erm_seen_v1",USER_KEY="cobalt_kwaliteit_user_v1",LOG_KEY="cobalt_kwaliteit_log_v1",READ_KEY="cobalt_kwaliteit_read_v1";
+var S={},L=[],readIds=[],currentUser="",lastUpdatedAt="",view="d",ch=0,ar=0,ermFilter="rel",rsArmed=false,rsTimer=null,syncStatus="",savingInFlight=false;
 var ermState={loading:false,error:null,data:null,offline:false,newCount:0,changedCodes:{}};
 
 try{S=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){}
 try{L=JSON.parse(localStorage.getItem(LOG_KEY))||[];if(!Array.isArray(L))L=[]}catch(e){L=[]}
+try{readIds=JSON.parse(localStorage.getItem(READ_KEY))||[];if(!Array.isArray(readIds))readIds=[]}catch(e){readIds=[]}
 try{currentUser=String(localStorage.getItem(USER_KEY)||"").trim()}catch(e){}
 try{lastUpdatedAt=localStorage.getItem(META_KEY)||""}catch(e){}
 try{ermState.data=JSON.parse(localStorage.getItem(ERM_CACHE_KEY))||null}catch(e){}
@@ -174,6 +180,67 @@ function statusLabel(st){
   if(st==="done")return "Afgerond";
   if(st==="busy")return "Bezig";
   return "Te doen";
+}
+
+function isLogRead(id){
+  return readIds.indexOf(id)!==-1;
+}
+
+function getUnreadCount(){
+  return L.filter(function(item){return !isLogRead(item.id)}).length;
+}
+
+function saveReadIds(){
+  try{localStorage.setItem(READ_KEY,JSON.stringify(readIds))}catch(e){}
+  if(!currentUser||!/^https?:\/\//i.test(READ_API))return;
+  fetch(READ_API,{
+    method:"POST",
+    cache:"no-store",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({user:currentUser,readIds:readIds})
+  }).catch(function(){});
+}
+
+function loadReadIds(){
+  if(!currentUser||!/^https?:\/\//i.test(READ_API))return;
+  fetch(READ_API+"?user="+encodeURIComponent(currentUser)+"&_t="+Date.now(),{
+    cache:"no-store"
+  }).then(function(res){
+    return res.ok?res.json():null;
+  }).then(function(data){
+    if(data&&Array.isArray(data.readIds)){
+      var merged=readIds.slice();
+      data.readIds.forEach(function(id){
+        if(merged.indexOf(id)===-1)merged.push(id);
+      });
+      readIds=merged;
+      try{localStorage.setItem(READ_KEY,JSON.stringify(readIds))}catch(e){}
+      render();
+    }
+  }).catch(function(){});
+}
+
+function markLogRead(id){
+  if(!id||isLogRead(id))return;
+  readIds.push(id);
+  if(readIds.length>500)readIds=readIds.slice(-500);
+  saveReadIds();
+  render();
+}
+
+function markAllLogsRead(){
+  var changed=false;
+  L.forEach(function(item){
+    if(item.id&&!isLogRead(item.id)){
+      readIds.push(item.id);
+      changed=true;
+    }
+  });
+  if(changed){
+    if(readIds.length>500)readIds=readIds.slice(-500);
+    saveReadIds();
+    render();
+  }
 }
 
 function addChangeLog(description){
@@ -185,12 +252,15 @@ function addChangeLog(description){
   };
   L.unshift(entry);
   if(L.length>250)L=L.slice(0,250);
+  readIds.push(entry.id);
+  saveReadIds();
 }
 
 function saveLocal(){
   try{
     localStorage.setItem(KEY,JSON.stringify(S));
     localStorage.setItem(LOG_KEY,JSON.stringify(L));
+    localStorage.setItem(READ_KEY,JSON.stringify(readIds));
     if(lastUpdatedAt)localStorage.setItem(META_KEY,lastUpdatedAt);
   }catch(e){}
 }
@@ -291,6 +361,7 @@ function setUserName(name){
   try{localStorage.setItem(USER_KEY,currentUser)}catch(e){}
   syncLoginState();
   render();
+  loadReadIds();
 }
 
 function checkUpdates(data){
@@ -361,7 +432,8 @@ function lg(r){return '<span><i class="dot" style="background:var(--done)"></i>'
 
 function nav(){
   var nb=ermState.newCount>0?'<span class="badge">'+ermState.newCount+' nieuw</span>':"";
-  var lb=L.length>0?'<span class="badge">'+L.length+'</span>':"";
+  var unread=getUnreadCount();
+  var lb=unread>0?'<span class="badge">'+unread+'</span>':"";
   document.getElementById("nav").innerHTML=[
     ["d","Dashboard"],
     ["a","1 · Afvinklijst"],
@@ -387,12 +459,18 @@ return '<div class="lay">'+m+'<div class="main"><h2 class="h2">'+d.c+'</h2><p cl
 d.t.map(function(t,j){var s=S[sid(ch,j)]||"todo";return '<div class="ci '+(s=="done"?"done":"")+'"><select data-s="'+sid(ch,j)+'" style="border-color:'+(s=="done"?"var(--done)":s=="busy"?"var(--busy)":"#111")+'"><option value="todo"'+(s=="todo"?" selected":"")+'>Te doen</option><option value="busy"'+(s=="busy"?" selected":"")+'>Bezig</option><option value="done"'+(s=="done"?" selected":"")+'>Afgerond</option></select><div><span class="no">Taak '+String(j+1).padStart(2,"0")+'</span><span class="tx">'+t+'</span></div></div>'}).join("")+'</div></div>'}
 
 function wijzigingen(){
-  var html='<h2 class="h2">Wijzigingenoverzicht</h2><p class="sub">Overzicht van wie welke aanpassing heeft gedaan en op welke datum</p>';
+  var unread=getUnreadCount();
+  var html='<div class="bar"><div><h2 class="h2">Wijzigingenoverzicht</h2><p class="sub" style="margin-bottom:0">Klik op een wijziging om deze als gelezen te markeren ('+unread+' ongelezen)</p></div>'+
+    (unread>0?'<button type="button" class="btn" id="mark-all-read">Alles als gelezen markeren</button>':'')+
+    '</div>';
   if(!L.length){
     html+='<div class="bl"><span class="tag">Nog geen wijzigingen</span><p>Zodra iemand een status in de afvinklijst aanpast of de statussen reset, verschijnt dat hier met naam en datum.</p></div>';
   }else{
     html+=L.map(function(item){
-      return '<div class="log-item"><div class="log-top"><span>'+esc(item.user)+'</span><span class="log-date">'+esc(fmtTime(item.at))+'</span></div><div class="log-desc">'+esc(item.desc)+'</div></div>';
+      var read=isLogRead(item.id);
+      return '<div class="log-item '+(read?'read':'unread')+'" data-log-id="'+esc(item.id)+'">'+
+        '<div class="log-top"><span>'+(!read?'<span class="log-badge-new">Nieuw</span>':'')+esc(item.user)+'</span><span class="log-date">'+esc(fmtTime(item.at))+'</span></div>'+
+        '<div class="log-desc">'+esc(item.desc)+'</div></div>';
     }).join("");
   }
   return html+'<button class="back" data-v="d">← Terug naar dashboard</button>';
@@ -453,7 +531,7 @@ function render(){
   nav();
   document.getElementById("v").innerHTML=view=="d"?dash():view=="a"?chk():view=="w"?wijzigingen():kc();
 }
-function go(v){rsArmed=false;clearTimeout(rsTimer);view=v;if(v=="k"&&ar===0)markErmSeen();render();loadSharedStatuses(true);window.scrollTo(0,0)}
+function go(v){rsArmed=false;clearTimeout(rsTimer);view=v;if(v=="k"&&ar===0)markErmSeen();render();loadSharedStatuses(true);loadReadIds();window.scrollTo(0,0)}
 
 document.getElementById("login-form").addEventListener("submit",function(e){
   e.preventDefault();
@@ -465,33 +543,42 @@ document.getElementById("login-form").addEventListener("submit",function(e){
 
 document.getElementById("change-user").addEventListener("click",function(){
   currentUser="";
-  try{localStorage.removeItem(USER_KEY)}catch(e){}
+  readIds=[];
+  try{localStorage.removeItem(USER_KEY);localStorage.removeItem(READ_KEY)}catch(e){}
   syncLoginState();
   var inp=document.getElementById("username-input");
   inp.value="";
   setTimeout(function(){inp.focus();},20);
 });
 
-document.addEventListener("click",function(e){var t=e.target.closest("button");if(!t)return;var d=t.dataset;
-if(t.id=="home")return go("d");
-if(t.id=="erm-ref"){loadSharedStatuses(false);return loadErm(true)}
-if(t.id=="rs"){
-  if(rsArmed){
-    clearTimeout(rsTimer);rsArmed=false;S={};
-    try{localStorage.removeItem(KEY)}catch(err){}
-    addChangeLog("Alle statussen teruggezet naar 'Te doen'.");
-    save();render();
-  }else{
-    rsArmed=true;clearTimeout(rsTimer);
-    rsTimer=setTimeout(function(){rsArmed=false;if(view=="d")render()},5000);
-    render();
+document.addEventListener("click",function(e){
+  var logEl=e.target.closest(".log-item[data-log-id]");
+  if(logEl){
+    markLogRead(logEl.dataset.logId);
+    return;
   }
-  return;
-}
-if(d.ef){ermFilter=d.ef;return render()}
-if(d.v)go(d.v);
-else if(d.c!==undefined){ch=+d.c;go("a")}
-else if(d.a!==undefined){ar=+d.a;go("k")}});
+  var t=e.target.closest("button");if(!t)return;var d=t.dataset;
+  if(t.id=="mark-all-read")return markAllLogsRead();
+  if(t.id=="home")return go("d");
+  if(t.id=="erm-ref"){loadSharedStatuses(false);loadReadIds();return loadErm(true)}
+  if(t.id=="rs"){
+    if(rsArmed){
+      clearTimeout(rsTimer);rsArmed=false;S={};
+      try{localStorage.removeItem(KEY)}catch(err){}
+      addChangeLog("Alle statussen teruggezet naar 'Te doen'.");
+      save();render();
+    }else{
+      rsArmed=true;clearTimeout(rsTimer);
+      rsTimer=setTimeout(function(){rsArmed=false;if(view=="d")render()},5000);
+      render();
+    }
+    return;
+  }
+  if(d.ef){ermFilter=d.ef;return render()}
+  if(d.v)go(d.v);
+  else if(d.c!==undefined){ch=+d.c;go("a")}
+  else if(d.a!==undefined){ar=+d.a;go("k")}
+});
 document.getElementById("home").addEventListener("click",function(){go("d")});
 document.addEventListener("change",function(e){
   var s=e.target.dataset.s;
@@ -511,11 +598,12 @@ syncLoginState();
 if(currentUser){
   render();
   loadSharedStatuses(false);
+  loadReadIds();
 }
 loadErm(false);
 
 if(hasSync()){
-  setInterval(function(){if(document.visibilityState==="visible"&&currentUser)loadSharedStatuses(true)},15000);
+  setInterval(function(){if(document.visibilityState==="visible"&&currentUser){loadSharedStatuses(true);loadReadIds()}},15000);
 }
 
 if("serviceWorker" in navigator){
