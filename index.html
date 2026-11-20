@@ -26,6 +26,9 @@ body{background:#DDDDDD !important;background-image:linear-gradient(#DDDDDD,#DDD
 .hd{border-top:1.5px solid #111;padding-top:14px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
 .hd h1{font-family:var(--serif);font-weight:400;font-size:clamp(28px,4vw,46px);line-height:1;letter-spacing:-.015em;cursor:pointer;color:#111}
 .mic{font-size:14px;font-weight:600;letter-spacing:.04em;color:#111}
+.user-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:13px;font-weight:600;color:#111}
+.user-link{background:none;border:0;color:#111;font-size:12px;font-weight:700;text-decoration:underline;cursor:pointer;padding:0}
+.user-link:hover{opacity:.7}
 nav{display:flex;gap:0;border-bottom:1.5px solid #111;margin:16px 0 28px;flex-wrap:wrap}
 nav button{background:none;border:0;border-right:1px solid var(--faint);padding:11px 22px;font-size:15px;font-weight:600;letter-spacing:.03em;color:#111;cursor:pointer;display:flex;align-items:center;gap:8px}
 nav button:hover{background:var(--hov)}
@@ -81,14 +84,57 @@ nav button.on{background:#111 !important;background-image:linear-gradient(#111,#
 .back{margin-top:14px;background:none;border:1.5px solid #111;color:#111;font-size:13px;font-weight:600;padding:6px 12px;cursor:pointer}
 .rs{margin-top:44px;background:none;border:0;font-size:13px;opacity:.6;cursor:pointer;color:#111;text-decoration:underline}
 .rs.armed{opacity:1;font-weight:700;color:var(--todo);text-decoration:none;border:1.5px solid var(--todo);padding:6px 12px}
+
+/* Beginscherm / Inloggen */
+.login-wrap{max-width:520px;margin:36px auto 0;border-top:1.5px solid #111;border-bottom:1.5px solid #111;padding:28px 0}
+.login-wrap h2{font-family:var(--serif);font-weight:400;font-size:clamp(26px,3.2vw,38px);line-height:1.1;margin-bottom:10px;color:#111}
+.login-wrap p{font-size:15px;opacity:.8;margin-bottom:20px;color:#111}
+.login-form{display:flex;flex-direction:column;gap:14px}
+.login-form label{font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#111}
+.login-form input{padding:11px 14px;border:1.5px solid #111;background:#DDDDDD !important;color:#111 !important;font-size:16px;border-radius:0;outline:none}
+.login-form input:focus{box-shadow:inset 0 0 0 1px #111}
+.login-submit{align-self:flex-start;background:#111 !important;background-image:linear-gradient(#111,#111) !important;color:#DDDDDD !important;border:1.5px solid #111;padding:10px 22px;font-size:14px;font-weight:700;letter-spacing:.03em;cursor:pointer}
+.login-submit:hover{opacity:.88}
+
+/* Wijzigingenlog */
+.log-item{border-top:1px solid var(--faint);padding:12px 0;display:flex;flex-direction:column;gap:4px}
+.log-item:last-child{border-bottom:1px solid var(--faint)}
+.log-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;font-size:13px;font-weight:700;color:#111}
+.log-date{font-size:12px;opacity:.7;font-weight:600}
+.log-desc{font-size:15px;color:#111}
+
 @media(max-width:760px){.lay{flex-direction:column}.menu{flex:none;width:100%;border-right:0;border-bottom:1.5px solid #111;padding:0 0 10px;position:static}.ci{flex-wrap:wrap}}
 </style>
 </head>
 <body>
 <div class="wrap">
-<div class="hd"><h1 id="home">Kwaliteitshandboek<br>Monumentaal schilderwerk</h1><span class="mic">PlenderWestendorp</span></div>
-<nav id="nav"></nav>
-<div id="v"></div>
+<div class="hd">
+  <div>
+    <h1 id="home">Kwaliteitshandboek<br>Monumentaal schilderwerk</h1>
+    <div class="user-bar" id="user-bar" style="display:none">
+      <span>Ingelogd als <strong id="logged-user"></strong></span>
+      <button type="button" class="user-link" id="change-user">Wijzigen</button>
+    </div>
+  </div>
+  <span class="mic">PlenderWestendorp</span>
+</div>
+
+<div id="login-screen" style="display:none">
+  <div class="login-wrap">
+    <h2>Welkom bij het kwaliteitshandboek</h2>
+    <p>Vul je naam in om door te gaan. Je naam wordt onthouden en bij wijzigingen vastgelegd.</p>
+    <form class="login-form" id="login-form">
+      <label for="username-input">Gebruikersnaam</label>
+      <input id="username-input" type="text" autocomplete="name" placeholder="Vul gebruikersnaam in" required>
+      <button type="submit" class="login-submit">Doorgaan</button>
+    </form>
+  </div>
+</div>
+
+<div id="app-shell" style="display:none">
+  <nav id="nav"></nav>
+  <div id="v"></div>
+</div>
 </div>
 <script>
 var ERM_API = "https://erm-updates.thijsdemoor.workers.dev";
@@ -113,17 +159,37 @@ var K=[
 ["e","BRL 4000: regels voor het bedrijf","De BRL 4000 beschrijft waar een bedrijf aan moet voldoen om een certificaat te krijgen. Er wordt onder andere gekeken naar de opleiding van medewerkers, aantoonbare ervaring met monumenten, vaste werkafspraken, eigen controles en een goede administratie (zoals dit kwaliteitshandboek)."],
 ["t","URL’s (zoals URL 4009): regels voor het werk","Een URL (Uitvoeringsrichtlijn) gaat over het werk op de bouwplaats zelf. Voor schilderwerk is dat URL 4009. Zo blijft het verschil duidelijk tussen de kwaliteit van het bedrijf (BRL) en de kwaliteit van het schilderwerk (URL)."]]}];
 
-var KEY="cobalt_kwaliteit_status_v3",META_KEY="cobalt_kwaliteit_meta_v1",ERM_CACHE_KEY="cobalt_erm_cache_v1",ERM_SEEN_KEY="cobalt_erm_seen_v1";
-var S={},lastUpdatedAt="",view="d",ch=0,ar=0,ermFilter="rel",rsArmed=false,rsTimer=null,syncStatus="",savingInFlight=false;
+var KEY="cobalt_kwaliteit_status_v3",META_KEY="cobalt_kwaliteit_meta_v1",ERM_CACHE_KEY="cobalt_erm_cache_v1",ERM_SEEN_KEY="cobalt_erm_seen_v1",USER_KEY="cobalt_kwaliteit_user_v1",LOG_KEY="cobalt_kwaliteit_log_v1";
+var S={},L=[],currentUser="",lastUpdatedAt="",view="d",ch=0,ar=0,ermFilter="rel",rsArmed=false,rsTimer=null,syncStatus="",savingInFlight=false;
 var ermState={loading:false,error:null,data:null,offline:false,newCount:0,changedCodes:{}};
 
 try{S=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){}
+try{L=JSON.parse(localStorage.getItem(LOG_KEY))||[];if(!Array.isArray(L))L=[]}catch(e){L=[]}
+try{currentUser=String(localStorage.getItem(USER_KEY)||"").trim()}catch(e){}
 try{lastUpdatedAt=localStorage.getItem(META_KEY)||""}catch(e){}
 try{ermState.data=JSON.parse(localStorage.getItem(ERM_CACHE_KEY))||null}catch(e){}
+
+function statusLabel(st){
+  if(st==="done")return "Afgerond";
+  if(st==="busy")return "Bezig";
+  return "Te doen";
+}
+
+function addChangeLog(description){
+  var entry={
+    id:Date.now()+"-"+Math.random().toString(36).slice(2,7),
+    user:currentUser||"Onbekend",
+    at:new Date().toISOString(),
+    desc:description
+  };
+  L.unshift(entry);
+  if(L.length>250)L=L.slice(0,250);
+}
 
 function saveLocal(){
   try{
     localStorage.setItem(KEY,JSON.stringify(S));
+    localStorage.setItem(LOG_KEY,JSON.stringify(L));
     if(lastUpdatedAt)localStorage.setItem(META_KEY,lastUpdatedAt);
   }catch(e){}
 }
@@ -143,7 +209,7 @@ function save(){
     method:"POST",
     cache:"no-store",
     headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({statuses:S,updatedAt:lastUpdatedAt})
+    body:JSON.stringify({statuses:S,logs:L,updatedAt:lastUpdatedAt})
   }).then(function(res){
     if(!res.ok)throw new Error("HTTP "+res.status);
     return res.json().catch(function(){return {}});
@@ -171,17 +237,19 @@ function loadSharedStatuses(silent){
   }).then(function(payload){
     if(savingInFlight)return;
     var remote=(payload&&payload.statuses&&typeof payload.statuses==="object")?payload.statuses:payload;
+    var remoteLogs=(payload&&Array.isArray(payload.logs))?payload.logs:null;
     var remoteTime=(payload&&payload.updatedAt)?payload.updatedAt:"";
     if(remote&&typeof remote==="object"){
       var localMs=lastUpdatedAt?Date.parse(lastUpdatedAt):0;
       var remoteMs=remoteTime?Date.parse(remoteTime):0;
       if(!remoteMs||!localMs||remoteMs>=localMs){
-        var prev=JSON.stringify(S);
-        var next=JSON.stringify(remote);
+        var prev=JSON.stringify(S)+"|"+JSON.stringify(L);
         S=remote;
+        if(remoteLogs)L=remoteLogs;
         if(remoteTime)lastUpdatedAt=remoteTime;
         saveLocal();
         syncStatus="Gedeelde lijst actueel";
+        var next=JSON.stringify(S)+"|"+JSON.stringify(L);
         if(prev!==next)render();
       }else{
         syncStatus="Gedeelde lijst actueel";
@@ -196,6 +264,32 @@ function esc(s){return String(s||"").replace(/[&<>"']/g,function(c){return{"&":"
 function safeUrl(u){return /^https?:\/\//i.test(String(u||""))?u:"https://www.stichtingerm.nl"}
 function fmtTime(iso){if(!iso)return"";var d=new Date(iso);if(isNaN(d))return"";return d.toLocaleDateString("nl-NL")+" om "+d.toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"})}
 function isConfigured(){return ERM_API&&ERM_API.indexOf("PLAK_HIER")===-1&&/^https?:\/\//i.test(ERM_API)}
+
+function syncLoginState(){
+  var loginEl=document.getElementById("login-screen");
+  var appEl=document.getElementById("app-shell");
+  var userBar=document.getElementById("user-bar");
+  var loggedUserEl=document.getElementById("logged-user");
+  if(!currentUser){
+    loginEl.style.display="block";
+    appEl.style.display="none";
+    userBar.style.display="none";
+  }else{
+    loginEl.style.display="none";
+    appEl.style.display="block";
+    userBar.style.display="flex";
+    loggedUserEl.textContent=currentUser;
+  }
+}
+
+function setUserName(name){
+  var clean=String(name||"").trim();
+  if(!clean)return;
+  currentUser=clean;
+  try{localStorage.setItem(USER_KEY,currentUser)}catch(e){}
+  syncLoginState();
+  render();
+}
 
 function checkUpdates(data){
   var seen={};
@@ -252,13 +346,26 @@ function loadErm(force){
 }
 
 function sid(i,j){return "cobalt-"+i+"-"+j}
+function findTaskBySid(taskSid){
+  var m=/^cobalt-(\d+)-(\d+)$/.exec(String(taskSid||""));
+  if(!m)return null;
+  var i=+m[1],j=+m[2];
+  if(!D[i]||!D[i].t[j])return null;
+  return {chapter:D[i].c,task:D[i].t[j]};
+}
 function cnt(i){var r={done:0,busy:0,todo:0};D[i].t.forEach(function(_,j){r[S[sid(i,j)]||"todo"]++});return r}
 function pie(r,n){var a=r.done/n*100,b=a+r.busy/n*100;return "conic-gradient(var(--done) 0 "+a+"%,var(--busy) "+a+"% "+b+"%,var(--todo) "+b+"% 100%)"}
 function lg(r){return '<span><i class="dot" style="background:var(--done)"></i>'+r.done+' afgerond</span><span><i class="dot" style="background:var(--busy)"></i>'+r.busy+' bezig</span><span><i class="dot" style="background:var(--todo)"></i>'+r.todo+' te doen</span>'}
 
 function nav(){
   var nb=ermState.newCount>0?'<span class="badge">'+ermState.newCount+' nieuw</span>':"";
-  document.getElementById("nav").innerHTML=[["d","Dashboard"],["a","1 · Afvinklijst"],["k","2 · Kenniscentrum"+nb]].map(function(x){
+  var lb=L.length>0?'<span class="badge">'+L.length+'</span>':"";
+  document.getElementById("nav").innerHTML=[
+    ["d","Dashboard"],
+    ["a","1 · Afvinklijst"],
+    ["k","2 · Kenniscentrum"+nb],
+    ["w","3 · Wijzigingen"+lb]
+  ].map(function(x){
     return '<button data-v="'+x[0]+'" class="'+(view==x[0]?"on":"")+'">'+x[1]+'</button>';
   }).join("");
 }
@@ -276,6 +383,18 @@ var m='<div class="menu">'+D.map(function(x,i){var q=cnt(i);return '<button data
 var subTxt=r.done+' afgerond · '+r.busy+' bezig · '+r.todo+' te doen'+(syncStatus?' · '+syncStatus:'');
 return '<div class="lay">'+m+'<div class="main"><h2 class="h2">'+d.c+'</h2><p class="sub">'+esc(subTxt)+'</p>'+
 d.t.map(function(t,j){var s=S[sid(ch,j)]||"todo";return '<div class="ci '+(s=="done"?"done":"")+'"><select data-s="'+sid(ch,j)+'" style="border-color:'+(s=="done"?"var(--done)":s=="busy"?"var(--busy)":"#111")+'"><option value="todo"'+(s=="todo"?" selected":"")+'>Te doen</option><option value="busy"'+(s=="busy"?" selected":"")+'>Bezig</option><option value="done"'+(s=="done"?" selected":"")+'>Afgerond</option></select><div><span class="no">Taak '+String(j+1).padStart(2,"0")+'</span><span class="tx">'+t+'</span></div></div>'}).join("")+'</div></div>'}
+
+function wijzigingen(){
+  var html='<h2 class="h2">Wijzigingenoverzicht</h2><p class="sub">Overzicht van wie welke aanpassing heeft gedaan en op welke datum</p>';
+  if(!L.length){
+    html+='<div class="bl"><span class="tag">Nog geen wijzigingen</span><p>Zodra iemand een status in de afvinklijst aanpast of de statussen reset, verschijnt dat hier met naam en datum.</p></div>';
+  }else{
+    html+=L.map(function(item){
+      return '<div class="log-item"><div class="log-top"><span>'+esc(item.user)+'</span><span class="log-date">'+esc(fmtTime(item.at))+'</span></div><div class="log-desc">'+esc(item.desc)+'</div></div>';
+    }).join("");
+  }
+  return html+'<button class="back" data-v="d">← Terug naar dashboard</button>';
+}
 
 function ermLive(){
   var st=ermState.loading?"Bezig met ophalen bij Stichting ERM…":
@@ -326,8 +445,30 @@ return '<div class="lay">'+m+'<div class="main"><h2 class="h2">'+a.n+'</h2><p cl
 a.b.map(function(b,i){return '<div class="bl '+b[0]+'" id="bl-'+i+'"><span class="tag">'+(b[0]=="e"?"Eis":"Toelichting")+'</span><h4>'+b[1]+'</h4><p>'+b[2]+'</p></div>'}).join("")+
 '<button class="back" data-v="a">← Terug naar afvinklijst</button></div></div>'}
 
-function render(){nav();document.getElementById("v").innerHTML=view=="d"?dash():view=="a"?chk():kc()}
+function render(){
+  if(!currentUser){syncLoginState();return;}
+  syncLoginState();
+  nav();
+  document.getElementById("v").innerHTML=view=="d"?dash():view=="a"?chk():view=="w"?wijzigingen():kc();
+}
 function go(v){rsArmed=false;clearTimeout(rsTimer);view=v;if(v=="k"&&ar===0)markErmSeen();render();loadSharedStatuses(true);window.scrollTo(0,0)}
+
+document.getElementById("login-form").addEventListener("submit",function(e){
+  e.preventDefault();
+  var inp=document.getElementById("username-input");
+  var val=String(inp.value||"").trim();
+  if(!val){inp.focus();return;}
+  setUserName(val);
+});
+
+document.getElementById("change-user").addEventListener("click",function(){
+  currentUser="";
+  try{localStorage.removeItem(USER_KEY)}catch(e){}
+  syncLoginState();
+  var inp=document.getElementById("username-input");
+  inp.value="";
+  setTimeout(function(){inp.focus();},20);
+});
 
 document.addEventListener("click",function(e){var t=e.target.closest("button");if(!t)return;var d=t.dataset;
 if(t.id=="home")return go("d");
@@ -336,6 +477,7 @@ if(t.id=="rs"){
   if(rsArmed){
     clearTimeout(rsTimer);rsArmed=false;S={};
     try{localStorage.removeItem(KEY)}catch(err){}
+    addChangeLog("Alle statussen teruggezet naar 'Te doen'.");
     save();render();
   }else{
     rsArmed=true;clearTimeout(rsTimer);
@@ -349,14 +491,29 @@ if(d.v)go(d.v);
 else if(d.c!==undefined){ch=+d.c;go("a")}
 else if(d.a!==undefined){ar=+d.a;go("k")}});
 document.getElementById("home").addEventListener("click",function(){go("d")});
-document.addEventListener("change",function(e){var s=e.target.dataset.s;if(!s)return;S[s]=e.target.value;save();render()});
+document.addEventListener("change",function(e){
+  var s=e.target.dataset.s;
+  if(!s)return;
+  var prevStatus=S[s]||"todo";
+  var nextStatus=e.target.value;
+  if(prevStatus===nextStatus)return;
+  S[s]=nextStatus;
+  var info=findTaskBySid(s);
+  var label=info?(info.chapter+" — "+info.task):s;
+  addChangeLog(label+": "+statusLabel(prevStatus)+" → "+statusLabel(nextStatus));
+  save();
+  render();
+});
 
-render();
-loadSharedStatuses(false);
+syncLoginState();
+if(currentUser){
+  render();
+  loadSharedStatuses(false);
+}
 loadErm(false);
 
 if(hasSync()){
-  setInterval(function(){if(document.visibilityState==="visible")loadSharedStatuses(true)},15000);
+  setInterval(function(){if(document.visibilityState==="visible"&&currentUser)loadSharedStatuses(true)},15000);
 }
 
 if("serviceWorker" in navigator){
