@@ -18,9 +18,13 @@
 <style>
 :root{
   --paper:#DDDDDD;
+  --surface:#E5E5E5;
+  --surface-elev:#ECECEC;
   --ink:#111;
-  --faint:rgba(17,17,17,.18);
-  --hov:rgba(17,17,17,.05);
+  --muted:rgba(17,17,17,.68);
+  --faint:rgba(17,17,17,.14);
+  --line:rgba(17,17,17,.22);
+  --hov:rgba(17,17,17,.045);
   --done:#2ecc71;
   --busy:#f39c12;
   --todo:#e74c3c;
@@ -53,36 +57,63 @@ body{
   forced-color-adjust:none;
 }
 .wrap{
-  max-width:1240px;
+  max-width:1260px;
   margin:0 auto;
-  padding:18px var(--edge) 60px;
+  padding:20px var(--edge) 68px;
 }
 .serif{
   font-family:var(--serif);
 }
+
+/* Logo zonder rand met vloeiende overloop in de achtergrond */
+.pw-logo-fade{
+  display:block;
+  object-fit:contain;
+  background:transparent;
+  border:0;
+  mix-blend-mode:multiply;
+  -webkit-mask-image:radial-gradient(ellipse 74% 74% at 50% 50%, #000 52%, rgba(0,0,0,.62) 74%, rgba(0,0,0,0) 100%);
+  mask-image:radial-gradient(ellipse 74% 74% at 50% 50%, #000 52%, rgba(0,0,0,.62) 74%, rgba(0,0,0,0) 100%);
+}
+.hd-brand{
+  display:flex;
+  align-items:center;
+  gap:16px;
+}
+.hd-logo{
+  width:54px;
+  height:54px;
+  flex:none;
+}
+
+/* Moderne headerbalk */
 .hd{
-  border-top:1.5px solid #111;
-  padding-top:14px;
+  background:var(--surface);
+  border:1px solid var(--faint);
+  border-radius:14px;
+  padding:18px 24px;
   display:flex;
   justify-content:space-between;
   align-items:flex-end;
-  gap:12px;
+  gap:16px;
   flex-wrap:wrap;
+  box-shadow:0 8px 24px rgba(17,17,17,.04);
 }
 .hd h1{
   font-family:var(--serif);
   font-weight:400;
-  font-size:clamp(28px,4vw,46px);
-  line-height:1;
+  font-size:clamp(26px,3.6vw,42px);
+  line-height:1.04;
   letter-spacing:-.015em;
   cursor:pointer;
   color:#111;
 }
 .mic{
-  font-size:14px;
-  font-weight:600;
-  letter-spacing:.04em;
-  color:#111;
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--muted);
 }
 .user-bar{
   display:flex;
@@ -107,26 +138,32 @@ body{
 .user-link:hover{
   opacity:.7;
 }
+
+/* Moderne navigatiebalk */
 nav{
   display:flex;
-  gap:0;
-  border-bottom:1.5px solid #111;
-  margin:16px 0 28px;
+  gap:8px;
+  background:var(--surface);
+  border:1px solid var(--faint);
+  border-radius:12px;
+  padding:6px;
+  margin:18px 0 28px;
   flex-wrap:wrap;
 }
 nav button{
   background:none;
   border:0;
-  border-right:1px solid var(--faint);
-  padding:11px 22px;
-  font-size:15px;
+  border-radius:8px;
+  padding:10px 18px;
+  font-size:14px;
   font-weight:600;
-  letter-spacing:.03em;
+  letter-spacing:.02em;
   color:#111;
   cursor:pointer;
   display:flex;
   align-items:center;
   gap:8px;
+  transition:background .15s,color .15s;
 }
 nav button:hover{
   background:var(--hov);
@@ -139,75 +176,98 @@ nav button.on{
 .badge{
   font-size:11px;
   font-weight:700;
-  padding:1px 6px;
+  padding:1px 7px;
+  border-radius:999px;
   border:1px solid currentColor;
-  letter-spacing:.04em;
-  text-transform:uppercase;
+  letter-spacing:.03em;
 }
 .h2{
   font-family:var(--serif);
   font-weight:400;
   font-size:clamp(22px,2.2vw,32px);
-  line-height:1.1;
+  line-height:1.12;
   letter-spacing:-.01em;
   color:#111;
 }
+
+/* Samenvattingsstrook (geïnspireerd op hero-statistiek + horizontale sectie) */
 .sum{
+  background:var(--surface);
+  border:1px solid var(--faint);
+  border-radius:14px;
+  padding:24px 28px;
   display:flex;
-  gap:clamp(18px,4vw,56px);
+  gap:clamp(22px,4vw,56px);
   flex-wrap:wrap;
   align-items:flex-end;
-  margin-bottom:30px;
+  justify-content:space-between;
+  margin-bottom:28px;
+}
+.sum-left{
+  display:flex;
+  align-items:baseline;
+  gap:18px;
+  flex-wrap:wrap;
+}
+.sum-stats{
+  display:flex;
+  gap:clamp(20px,3.5vw,44px);
+  flex-wrap:wrap;
+  align-items:flex-end;
 }
 .big{
   font-family:var(--serif);
-  font-size:clamp(48px,7vw,92px);
-  line-height:.9;
+  font-size:clamp(46px,6.5vw,84px);
+  line-height:.92;
   letter-spacing:-.02em;
   color:#111;
 }
 .sum .it b{
   font-family:var(--serif);
   font-weight:400;
-  font-size:34px;
+  font-size:32px;
   display:block;
-  line-height:1;
+  line-height:1.05;
   color:#111;
 }
 .sum .it span{
-  font-size:14px;
+  font-size:13.5px;
   font-weight:600;
   display:flex;
   align-items:center;
   gap:7px;
-  color:#111;
+  color:var(--muted);
 }
 .dot{
-  width:12px;
-  height:12px;
+  width:11px;
+  height:11px;
   border-radius:50%;
-  border:1px solid #111;
+  border:1px solid rgba(17,17,17,.35);
   display:inline-block;
 }
+
+/* Kaartengrid op het dashboard */
 .dg{
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(310px,1fr));
-  gap:clamp(18px,2.4vw,40px);
+  gap:clamp(18px,2.2vw,28px);
 }
 .dc{
-  border-top:1.5px solid #111;
-  padding-top:14px;
+  background:var(--surface);
+  border:1px solid var(--faint);
+  border-radius:14px;
+  padding:20px 22px;
   cursor:pointer;
-  background:none;
-  border-left:0;
-  border-right:0;
-  border-bottom:0;
   text-align:left;
   color:#111;
   font:inherit;
+  transition:transform .15s,background .15s,border-color .15s,box-shadow .15s;
 }
 .dc:hover{
-  background:var(--hov);
+  background:var(--surface-elev);
+  border-color:var(--line);
+  transform:translateY(-2px);
+  box-shadow:0 10px 22px rgba(17,17,17,.06);
 }
 .dc .row{
   display:flex;
@@ -216,10 +276,10 @@ nav button.on{
   margin-top:16px;
 }
 .pie{
-  width:84px;
-  height:84px;
+  width:80px;
+  height:80px;
   border-radius:50%;
-  border:1.5px solid #111;
+  border:1px solid var(--line);
   flex:none;
 }
 .lg{
@@ -237,24 +297,29 @@ nav button.on{
 }
 .go{
   display:block;
-  margin-top:14px;
+  margin-top:16px;
+  padding-top:12px;
+  border-top:1px solid var(--faint);
   font-size:13px;
-  font-weight:600;
-  letter-spacing:.04em;
-  opacity:.7;
-  color:#111;
+  font-weight:700;
+  letter-spacing:.03em;
+  color:var(--muted);
 }
+
+/* Zijmenu + hoofdvlak (geïnspireerd op zijbalk + contentpaneel uit voorbeeld) */
 .lay{
   display:flex;
-  gap:clamp(18px,3vw,48px);
+  gap:clamp(20px,3vw,36px);
   align-items:flex-start;
 }
 .menu{
-  flex:0 0 250px;
-  border-right:1.5px solid #111;
-  padding-right:clamp(14px,2vw,32px);
+  flex:0 0 264px;
+  background:var(--surface);
+  border:1px solid var(--faint);
+  border-radius:14px;
+  padding:10px;
   position:sticky;
-  top:12px;
+  top:14px;
 }
 .menu button{
   display:block;
@@ -262,44 +327,51 @@ nav button.on{
   text-align:left;
   background:none;
   border:0;
-  border-bottom:1px solid var(--faint);
-  padding:12px 0;
+  border-radius:9px;
+  border-bottom:1px solid rgba(17,17,17,.07);
+  padding:12px 14px;
   font-size:14px;
   font-weight:600;
-  letter-spacing:.03em;
+  letter-spacing:.02em;
   color:#111;
   cursor:pointer;
+  transition:background .15s,padding-left .15s;
+}
+.menu button:last-child{
+  border-bottom:0;
 }
 .menu button:hover{
   background:var(--hov);
-  padding-left:10px;
+  padding-left:17px;
 }
 .menu button.on{
   background:#111 !important;
   background-image:linear-gradient(#111,#111) !important;
   color:#DDDDDD !important;
-  padding-left:14px;
-  border-bottom-color:#111;
+  border-bottom-color:transparent;
 }
 .menu small{
   display:block;
   font-weight:400;
   font-size:12px;
-  opacity:.7;
-  margin-top:2px;
+  opacity:.72;
+  margin-top:3px;
 }
 .main{
   flex:1;
   min-width:0;
+  background:var(--surface);
+  border:1px solid var(--faint);
+  border-radius:14px;
+  padding:24px 26px;
 }
 .main .h2{
   margin-bottom:6px;
 }
 .sub{
   font-size:14px;
-  opacity:.7;
+  color:var(--muted);
   margin-bottom:18px;
-  color:#111;
 }
 .filter-bar{
   display:flex;
@@ -309,40 +381,47 @@ nav button.on{
   margin-bottom:16px;
 }
 .search-inp{
-  padding:7px 11px;
-  border:1.5px solid #111;
-  background:#DDDDDD !important;
+  padding:9px 14px;
+  border:1px solid var(--line);
+  border-radius:9px;
+  background:var(--surface-elev) !important;
   color:#111 !important;
   font-size:14px;
   min-width:220px;
   flex:1;
-  max-width:380px;
-  border-radius:0;
+  max-width:420px;
   outline:none;
 }
 .search-inp:focus{
-  box-shadow:inset 0 0 0 1px #111;
+  border-color:#111;
+  box-shadow:0 0 0 2px rgba(17,17,17,.08);
 }
+
+/* Afvinklijst-regels */
 .ci{
   display:flex;
-  gap:20px;
+  gap:18px;
   align-items:flex-start;
-  padding:13px 0;
+  padding:14px 10px;
   border-bottom:1px solid var(--faint);
+  border-radius:8px;
+}
+.ci:last-child{
+  border-bottom:0;
 }
 .ci:hover{
   background:var(--hov);
 }
 .ci select{
-  padding:5px 8px;
+  padding:6px 10px;
   border:1.5px solid #111;
-  background:#DDDDDD !important;
+  border-radius:8px;
+  background:var(--surface-elev) !important;
   color:#111 !important;
   font-size:14px;
   font-weight:600;
   cursor:pointer;
-  width:112px;
-  border-radius:0;
+  width:116px;
   flex:none;
 }
 .ci.done .tx{
@@ -351,58 +430,65 @@ nav button.on{
 }
 .ci .no{
   font-size:12px;
-  font-weight:600;
-  letter-spacing:.04em;
-  opacity:.65;
+  font-weight:700;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+  color:var(--muted);
   display:block;
-  margin-bottom:3px;
-  color:#111;
+  margin-bottom:2px;
 }
 .ci .tx{
   font-size:15px;
   color:#111;
 }
+
+/* Kenniscentrum & ERM-kaarten */
 .bl{
-  border-top:1.5px solid #111;
-  padding:14px 10px 18px;
-  transition:background .2s;
+  background:var(--surface-elev);
+  border:1px solid var(--faint);
+  border-radius:12px;
+  padding:16px 18px;
+  margin-bottom:12px;
+  transition:background .15s,border-color .15s;
   cursor:pointer;
 }
 .bl.hl{
   background:var(--hov);
 }
 .bl:hover{
-  background:var(--hov);
+  border-color:var(--line);
 }
 .bl.unread{
   border-left:4px solid #111;
-  padding-left:14px;
-  background:rgba(17,17,17,.04);
+  background:#EFEFEF;
 }
 .bl.read{
-  opacity:.72;
+  opacity:.74;
 }
 .tag{
   display:inline-block;
-  font-size:12px;
+  font-size:11.5px;
   font-weight:700;
-  letter-spacing:.06em;
+  letter-spacing:.05em;
   text-transform:uppercase;
   padding:2px 8px;
-  border:1.5px solid #111;
+  border-radius:6px;
+  border:1px solid var(--line);
   margin-bottom:8px;
   margin-right:6px;
   color:#111;
+  background:transparent;
 }
 .bl.e .tag,.tag.inv{
   background:#111 !important;
   background-image:linear-gradient(#111,#111) !important;
+  border-color:#111;
   color:#DDDDDD !important;
 }
 .tag.new{
   background:var(--busy) !important;
   color:#111 !important;
-  border-color:#111;
+  border-color:rgba(17,17,17,.35);
 }
 .item-badge-new{
   display:inline-block;
@@ -410,7 +496,8 @@ nav button.on{
   font-weight:700;
   letter-spacing:.05em;
   text-transform:uppercase;
-  padding:1px 6px;
+  padding:2px 7px;
+  border-radius:999px;
   background:#111;
   color:#DDDDDD;
   margin-right:8px;
@@ -420,26 +507,31 @@ nav button.on{
   font-family:var(--serif);
   font-weight:400;
   font-size:21px;
-  line-height:1.15;
-  margin-bottom:5px;
+  line-height:1.18;
+  margin-bottom:6px;
   color:#111;
 }
 .bl p{
   font-size:15.5px;
-  max-width:70ch;
+  max-width:72ch;
   color:#111;
 }
 .bl a{
   color:#111;
   font-size:14px;
-  font-weight:600;
+  font-weight:700;
   display:inline-block;
-  margin-top:8px;
-  text-underline-offset:3px;
+  margin-top:10px;
+  text-decoration:none;
+  border-bottom:1px solid #111;
+  padding-bottom:1px;
+}
+.bl a:hover{
+  opacity:.72;
 }
 .bar{
   display:flex;
-  gap:10px;
+  gap:12px;
   flex-wrap:wrap;
   align-items:center;
   justify-content:space-between;
@@ -451,26 +543,33 @@ nav button.on{
   flex-wrap:wrap;
 }
 .btn{
-  background:none;
-  border:1.5px solid #111;
+  background:var(--surface-elev);
+  border:1px solid var(--line);
+  border-radius:8px;
   color:#111;
   font-size:13px;
   font-weight:600;
-  padding:6px 12px;
+  padding:7px 13px;
   cursor:pointer;
+  transition:background .15s,color .15s;
 }
-.btn:hover,.btn.on{
+.btn:hover{
+  background:var(--hov);
+}
+.btn.on{
   background:#111 !important;
   background-image:linear-gradient(#111,#111) !important;
+  border-color:#111;
   color:#DDDDDD !important;
 }
 .live-btn{
-  background:none;
-  border:1.5px solid #111;
+  background:var(--surface-elev);
+  border:1px solid var(--line);
+  border-radius:8px;
   color:#111;
   font-size:13px;
   font-weight:700;
-  padding:6px 12px;
+  padding:7px 13px;
   cursor:pointer;
   display:inline-flex;
   align-items:center;
@@ -483,26 +582,28 @@ nav button.on{
   width:10px;
   height:10px;
   border-radius:50%;
-  border:1px solid #111;
+  border:1px solid rgba(17,17,17,.35);
   display:inline-block;
   background:var(--busy);
 }
 .live-lamp.is-live{
   background:var(--done);
-  box-shadow:0 0 0 2px rgba(46,204,113,.28);
+  box-shadow:0 0 0 3px rgba(46,204,113,.24);
 }
 .live-lamp.is-err{
   background:var(--todo);
 }
 .rg{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
   gap:16px;
   margin-bottom:24px;
 }
 .rc{
-  border:1.5px solid #111;
-  padding:14px 16px;
+  background:var(--surface-elev);
+  border:1px solid var(--faint);
+  border-radius:12px;
+  padding:16px 18px;
 }
 .rc h4{
   font-family:var(--serif);
@@ -512,50 +613,55 @@ nav button.on{
   color:#111;
 }
 .rc .meta{
-  font-size:14px;
+  font-size:13.5px;
   font-weight:600;
-  color:#111;
+  color:var(--muted);
 }
 .rc a{
   color:#111;
   font-size:13px;
-  font-weight:600;
+  font-weight:700;
   display:inline-block;
-  margin-top:8px;
+  margin-top:10px;
+  text-decoration:none;
+  border-bottom:1px solid #111;
+  padding-bottom:1px;
 }
 .sec{
-  font-size:13px;
+  font-size:12.5px;
   font-weight:700;
-  letter-spacing:.06em;
+  letter-spacing:.07em;
   text-transform:uppercase;
-  margin:20px 0 10px;
-  opacity:.75;
-  color:#111;
+  margin:22px 0 12px;
+  color:var(--muted);
 }
 .back{
-  margin-top:14px;
-  background:none;
-  border:1.5px solid #111;
+  margin-top:16px;
+  background:var(--surface-elev);
+  border:1px solid var(--line);
+  border-radius:8px;
   color:#111;
   font-size:13px;
   font-weight:600;
-  padding:6px 12px;
+  padding:7px 14px;
   cursor:pointer;
+}
+.back:hover{
+  background:var(--hov);
 }
 .dash-tools{
   display:flex;
   gap:18px;
   align-items:center;
   flex-wrap:wrap;
-  margin-top:44px;
+  margin-top:36px;
 }
 .rs{
   background:none;
   border:0;
   font-size:13px;
-  opacity:.6;
+  color:var(--muted);
   cursor:pointer;
-  color:#111;
   text-decoration:underline;
 }
 .rs.armed{
@@ -564,58 +670,58 @@ nav button.on{
   color:var(--todo);
   text-decoration:none;
   border:1.5px solid var(--todo);
-  padding:6px 12px;
+  border-radius:8px;
+  padding:7px 13px;
 }
 
 /* Beginscherm / Inloggen */
 .login-wrap{
   max-width:520px;
   margin:36px auto 0;
-  border-top:1.5px solid #111;
-  border-bottom:1.5px solid #111;
-  padding:28px 0;
+  background:var(--surface);
+  border:1px solid var(--faint);
+  border-radius:16px;
+  padding:32px;
+  box-shadow:0 12px 30px rgba(17,17,17,.05);
 }
 .login-logo{
-  width:76px;
-  height:76px;
-  object-fit:contain;
-  display:block;
-  margin-bottom:16px;
-  border:1.5px solid #111;
-  background:#DDDDDD;
+  width:92px;
+  height:92px;
+  margin-bottom:18px;
 }
 .login-wrap h2{
   font-family:var(--serif);
   font-weight:400;
-  font-size:clamp(26px,3.2vw,38px);
-  line-height:1.1;
+  font-size:clamp(26px,3.2vw,36px);
+  line-height:1.12;
   margin-bottom:10px;
   color:#111;
 }
 .login-wrap p{
   font-size:15px;
-  opacity:.8;
-  margin-bottom:18px;
-  color:#111;
+  color:var(--muted);
+  margin-bottom:20px;
 }
 .login-modes{
   display:flex;
   gap:8px;
-  margin-bottom:18px;
+  margin-bottom:20px;
   flex-wrap:wrap;
 }
 .login-modes button{
-  background:none;
-  border:1.5px solid #111;
+  background:var(--surface-elev);
+  border:1px solid var(--line);
+  border-radius:8px;
   color:#111;
   font-size:13px;
   font-weight:700;
-  padding:7px 12px;
+  padding:7px 13px;
   cursor:pointer;
 }
 .login-modes button.on{
   background:#111 !important;
   background-image:linear-gradient(#111,#111) !important;
+  border-color:#111;
   color:#DDDDDD !important;
 }
 .login-form{
@@ -624,23 +730,24 @@ nav button.on{
   gap:14px;
 }
 .login-form label{
-  font-size:13px;
+  font-size:12.5px;
   font-weight:700;
-  letter-spacing:.04em;
+  letter-spacing:.05em;
   text-transform:uppercase;
   color:#111;
 }
 .login-form input{
   padding:11px 14px;
-  border:1.5px solid #111;
-  background:#DDDDDD !important;
+  border:1px solid var(--line);
+  border-radius:9px;
+  background:var(--surface-elev) !important;
   color:#111 !important;
   font-size:16px;
-  border-radius:0;
   outline:none;
 }
 .login-form input:focus{
-  box-shadow:inset 0 0 0 1px #111;
+  border-color:#111;
+  box-shadow:0 0 0 2px rgba(17,17,17,.08);
 }
 .login-err{
   color:#b00020;
@@ -653,7 +760,8 @@ nav button.on{
   background:#111 !important;
   background-image:linear-gradient(#111,#111) !important;
   color:#DDDDDD !important;
-  border:1.5px solid #111;
+  border:1px solid #111;
+  border-radius:9px;
   padding:10px 22px;
   font-size:14px;
   font-weight:700;
@@ -668,29 +776,28 @@ nav button.on{
   cursor:wait;
 }
 
-/* Wijzigingenlog (Outlook-stijl ongelezen / gelezen) */
+/* Wijzigingenlog */
 .log-item{
-  border-top:1px solid var(--faint);
-  padding:12px 10px;
+  background:var(--surface-elev);
+  border:1px solid var(--faint);
+  border-radius:11px;
+  padding:13px 16px;
+  margin-bottom:10px;
   display:flex;
   flex-direction:column;
   gap:4px;
   cursor:pointer;
-  transition:background .15s;
-}
-.log-item:last-child{
-  border-bottom:1px solid var(--faint);
+  transition:background .15s,border-color .15s;
 }
 .log-item:hover{
-  background:var(--hov);
+  border-color:var(--line);
 }
 .log-item.unread{
   border-left:4px solid #111;
-  padding-left:14px;
-  background:rgba(17,17,17,.04);
+  background:#EFEFEF;
 }
 .log-item.read{
-  opacity:.65;
+  opacity:.68;
 }
 .log-badge-new{
   display:inline-block;
@@ -698,7 +805,8 @@ nav button.on{
   font-weight:700;
   letter-spacing:.05em;
   text-transform:uppercase;
-  padding:1px 6px;
+  padding:2px 7px;
+  border-radius:999px;
   background:#111;
   color:#DDDDDD;
   margin-right:8px;
@@ -715,7 +823,7 @@ nav button.on{
 }
 .log-date{
   font-size:12px;
-  opacity:.7;
+  color:var(--muted);
   font-weight:600;
 }
 .log-desc{
@@ -725,7 +833,8 @@ nav button.on{
 
 @media(max-width:760px){
   .lay{flex-direction:column}
-  .menu{flex:none;width:100%;border-right:0;border-bottom:1.5px solid #111;padding:0 0 10px;position:static}
+  .menu{flex:none;width:100%;position:static}
+  .main{width:100%;padding:18px}
   .ci{flex-wrap:wrap}
 }
 </style>
@@ -733,11 +842,14 @@ nav button.on{
 <body>
 <div class="wrap">
 <div class="hd">
-  <div>
-    <h1 id="home">Kwaliteitshandboek<br>Monumentaal schilderwerk</h1>
-    <div class="user-bar" id="user-bar" style="display:none">
-      <span>Ingelogd als <strong id="logged-user"></strong></span>
-      <button type="button" class="user-link" id="change-user">Uitloggen</button>
+  <div class="hd-brand">
+    <img src="PlenderWestendorp_app-icoon_512.png" alt="PlenderWestendorp" class="hd-logo pw-logo-fade">
+    <div>
+      <h1 id="home">Kwaliteitshandboek<br>Monumentaal schilderwerk</h1>
+      <div class="user-bar" id="user-bar" style="display:none">
+        <span>Ingelogd als <strong id="logged-user"></strong></span>
+        <button type="button" class="user-link" id="change-user">Uitloggen</button>
+      </div>
     </div>
   </div>
   <span class="mic">PlenderWestendorp</span>
@@ -745,7 +857,7 @@ nav button.on{
 
 <div id="login-screen" style="display:none">
   <div class="login-wrap">
-    <img src="PlenderWestendorp_app-icoon_512.png" alt="PlenderWestendorp" class="login-logo">
+    <img src="PlenderWestendorp_app-icoon_512.png" alt="PlenderWestendorp" class="login-logo pw-logo-fade">
     <h2 id="login-title">Inloggen kwaliteitshandboek</h2>
     <p id="login-sub">Log in met je eigen gebruikersnaam en wachtwoord. Je wordt bij elk bezoek opnieuw gevraagd in te loggen.</p>
     <div class="login-modes">
@@ -1489,11 +1601,12 @@ function dash() {
     }
   });
   var p = n ? Math.round(T.done / n * 100) : 0;
-  return '<div class="sum"><div><div class="big">' + p + '%</div><div class="mic" style="margin-top:6px">van het handboek afgerond</div></div>' +
+  return '<div class="sum"><div class="sum-left"><div class="big">' + p + '%</div><div class="mic">van het handboek afgerond</div></div>' +
+    '<div class="sum-stats">' +
     [["done", "Afgerond"], ["busy", "Bezig"], ["todo", "Te doen"]].map(function (x) {
       return '<div class="it"><b>' + T[x[0]] + '</b><span><i class="dot" style="background:var(--' + x[0] + ')"></i>' + x[1] + '</span></div>';
     }).join("") +
-    '</div>' +
+    '</div></div>' +
     '<div class="dg">' + D.map(function (d, i) {
       var r = cnt(i);
       var m = d.t.length;
