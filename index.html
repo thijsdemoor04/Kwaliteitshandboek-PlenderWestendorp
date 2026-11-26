@@ -434,10 +434,12 @@ function loadErm(force){
   var sep=force?"?refresh=1&":"?";
   var url=ERM_API.replace(/\/+$/,"")+sep+"_t="+Date.now();
   fetch(url,{cache:"no-store"}).then(function(res){
-    if(!res.ok)throw new Error("HTTP "+res.status);
-    return res.json();
+    return res.json().catch(function(){return {}}).then(function(data){
+      if(!res.ok)throw new Error((data&&data.error)||("HTTP "+res.status));
+      return data;
+    });
   }).then(function(data){
-    if(data.error)throw new Error(data.error);
+    if(data&&data.error)throw new Error(data.detail?(data.error+" ("+data.detail+")"):data.error);
     ermState.data=data;
     ermState.loading=false;
     ermState.offline=false;
@@ -445,10 +447,11 @@ function loadErm(force){
     checkUpdates(data);
     if(currentUser&&view=="k"&&ar===0)markErmSeen();
     if(currentUser)render();
-  }).catch(function(){
+  }).catch(function(err){
     ermState.loading=false;
     ermState.offline=!!ermState.data;
-    ermState.error="Kan nu geen live verbinding maken met Stichting ERM.";
+    var msg=err&&err.message?err.message:"Kan nu geen live verbinding maken met Stichting ERM.";
+    ermState.error=msg;
     if(currentUser)render();
   });
 }
@@ -462,7 +465,7 @@ function findTaskBySid(taskSid){
   return {chapter:D[i].c,task:D[i].t[j]};
 }
 function cnt(i){var r={done:0,busy:0,todo:0};D[i].t.forEach(function(_,j){r[S[sid(i,j)]||"todo"]++});return r}
-function pie(r,n){var a=r.done/n*100,b=a+r.busy/n*100;return "conic-gradient(var(--done) 0 "+a+"%,var(--busy) "+a+"% "+b+"%,var(--todo) "+b+"% 100%)"}
+function pie(r,n){if(!n)return "var(--paper)";var a=r.done/n*100,b=a+r.busy/n*100;return "conic-gradient(var(--done) 0 "+a+"%,var(--busy) "+a+"% "+b+"%,var(--todo) "+b+"% 100%)"}
 function lg(r){return '<span><i class="dot" style="background:var(--done)"></i>'+r.done+' afgerond</span><span><i class="dot" style="background:var(--busy)"></i>'+r.busy+' bezig</span><span><i class="dot" style="background:var(--todo)"></i>'+r.todo+' te doen</span>'}
 
 function nav(){
@@ -480,7 +483,7 @@ function nav(){
 }
 
 function dash(){var T={done:0,busy:0,todo:0},n=0;D.forEach(function(_,i){var r=cnt(i);for(var k in r){T[k]+=r[k];n+=r[k]}});
-var p=Math.round(T.done/n*100);
+var p=n?Math.round(T.done/n*100):0;
 var syncInfo=syncStatus?'<div class="sub" style="margin-bottom:14px">'+esc(syncStatus)+'</div>':"";
 return syncInfo+'<div class="sum"><div><div class="big">'+p+'%</div><div class="mic" style="margin-top:6px">van het handboek afgerond</div></div>'+
 [["done","Afgerond"],["busy","Bezig"],["todo","Te doen"]].map(function(x){return '<div class="it"><b>'+T[x[0]]+'</b><span><i class="dot" style="background:var(--'+x[0]+')"></i>'+x[1]+'</span></div>'}).join("")+'</div>'+
@@ -517,11 +520,11 @@ function ermLive(){
     "Nog niet gecontroleerd";
   var out='<h2 class="h2">Actueel · ERM-updates</h2><div class="bar"><p class="sub" style="margin:0">'+esc(st)+'</p><button class="btn" id="erm-ref">'+(ermState.loading?"Laden…":"↻ Nu controleren")+'</button></div>';
   if(ermState.error){
-    out+='<div class="bl"><span class="tag">Melding</span><p>'+esc(ermState.error)+(ermState.offline?' Hieronder staan de laatst opgeslagen gegevens.':' Controleer je internetverbinding.')+'</p></div>';
+    out+='<div class="bl"><span class="tag">Melding</span><p>'+esc(ermState.error)+(ermState.offline?' Hieronder staan de laatst opgeslagen gegevens.':' Controleer je internetverbinding of Worker.')+'</p></div>';
   }
   if(ermState.data){
     var rl=ermState.data.richtlijnen||[];
-    out+='<div class="sec">Actuele richtlijnen &amp; monumenten (live van stichtingerm.nl)</div><div class="rg">'+
+    out+='<div class="sec">Actuele richtlijnen &amp; monumenten (via stichtingerm.nl)</div><div class="rg">'+
       rl.map(function(r){
         var isNew=ermState.changedCodes[r.code];
         return '<div class="rc"><span class="tag inv">'+esc(r.code)+'</span>'+(isNew?'<span class="tag new">Nieuwe versie</span>':'')+
@@ -600,11 +603,11 @@ document.getElementById("login-form").addEventListener("submit",function(e){
       password:password
     })
   }).then(function(res){
-    return res.json().then(function(data){return {ok:res.ok,data:data}});
+    return res.json().catch(function(){return {}}).then(function(data){return {ok:res.ok,data:data}});
   }).then(function(result){
     btn.disabled=false;
     setAuthMode(authMode);
-    if(!result.ok||!result.data.ok){
+    if(!result.ok||!result.data||!result.data.ok){
       errEl.textContent=(result.data&&result.data.error)||"Inloggen mislukt.";
       return;
     }
