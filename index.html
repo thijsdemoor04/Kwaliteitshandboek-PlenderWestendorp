@@ -65,7 +65,6 @@ body{
   font-family:var(--serif);
 }
 
-/* Logo zonder rand met vloeiende overloop in de achtergrond */
 .pw-logo-fade{
   display:block;
   object-fit:contain;
@@ -86,7 +85,6 @@ body{
   flex:none;
 }
 
-/* Moderne headerbalk */
 .hd{
   background:var(--surface);
   border:1px solid var(--faint);
@@ -139,7 +137,6 @@ body{
   opacity:.7;
 }
 
-/* Moderne navigatiebalk */
 nav{
   display:flex;
   gap:8px;
@@ -190,7 +187,6 @@ nav button.on{
   color:#111;
 }
 
-/* Dashboard-kop met Refresh */
 .dash-head{
   display:flex;
   align-items:center;
@@ -218,7 +214,6 @@ nav button.on{
   border-color:#111;
 }
 
-/* Samenvattingsstrook */
 .sum{
   background:var(--surface);
   border:1px solid var(--faint);
@@ -274,7 +269,6 @@ nav button.on{
   display:inline-block;
 }
 
-/* Kaartengrid op het dashboard */
 .dg{
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(310px,1fr));
@@ -334,7 +328,6 @@ nav button.on{
   color:var(--muted);
 }
 
-/* Zijmenu + hoofdvlak */
 .lay{
   display:flex;
   gap:clamp(20px,3vw,36px);
@@ -396,11 +389,6 @@ nav button.on{
 .main .h2{
   margin-bottom:14px;
 }
-.sub{
-  font-size:14px;
-  color:var(--muted);
-  margin-bottom:18px;
-}
 .filter-bar{
   display:flex;
   gap:10px;
@@ -425,7 +413,6 @@ nav button.on{
   box-shadow:0 0 0 2px rgba(17,17,17,.08);
 }
 
-/* Afvinklijst-regels */
 .ci{
   display:flex;
   gap:18px;
@@ -475,7 +462,6 @@ nav button.on{
   color:#111;
 }
 
-/* Optioneel notitieblok bij afvinken */
 .note-box{
   margin-top:12px;
   padding:14px 16px;
@@ -516,7 +502,6 @@ nav button.on{
   align-items:center;
 }
 
-/* Kenniscentrum & ERM-kaarten */
 .bl{
   background:var(--surface-elev);
   border:1px solid var(--faint);
@@ -525,9 +510,6 @@ nav button.on{
   margin-bottom:12px;
   transition:background .15s,border-color .15s;
   cursor:pointer;
-}
-.bl.hl{
-  background:var(--hov);
 }
 .bl:hover{
   border-color:var(--line);
@@ -765,7 +747,6 @@ nav button.on{
   padding:7px 13px;
 }
 
-/* Beginscherm / Inloggen */
 .login-wrap{
   max-width:520px;
   margin:36px auto 0;
@@ -862,7 +843,6 @@ nav button.on{
   cursor:wait;
 }
 
-/* Wijzigingenlog */
 .log-item{
   background:var(--surface-elev);
   border:1px solid var(--faint);
@@ -1602,12 +1582,10 @@ function loadAccountData(forceRender) {
       var localMs = lastUpdatedAt ? Date.parse(lastUpdatedAt) : 0;
       var remoteMs = remoteTime ? Date.parse(remoteTime) : 0;
 
-      if (Object.keys(remoteStatuses).length > 0 || (remoteMs && remoteMs >= localMs)) {
-        if (!localMs || !remoteMs || remoteMs >= localMs) {
-          S = Object.assign({}, remoteStatuses);
-        } else {
-          S = Object.assign({}, remoteStatuses, S);
-        }
+      if (!localMs || !remoteMs || remoteMs >= localMs) {
+        S = Object.assign({}, remoteStatuses);
+      } else {
+        S = Object.assign({}, remoteStatuses, S);
       }
 
       if (remoteLogs.length > 0) {
