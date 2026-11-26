@@ -87,14 +87,20 @@ nav button.on{background:#111 !important;background-image:linear-gradient(#111,#
 
 /* Beginscherm / Inloggen */
 .login-wrap{max-width:520px;margin:36px auto 0;border-top:1.5px solid #111;border-bottom:1.5px solid #111;padding:28px 0}
+.login-logo{width:76px;height:76px;object-fit:contain;display:block;margin-bottom:16px;border:1.5px solid #111;background:#DDDDDD}
 .login-wrap h2{font-family:var(--serif);font-weight:400;font-size:clamp(26px,3.2vw,38px);line-height:1.1;margin-bottom:10px;color:#111}
-.login-wrap p{font-size:15px;opacity:.8;margin-bottom:20px;color:#111}
+.login-wrap p{font-size:15px;opacity:.8;margin-bottom:18px;color:#111}
+.login-modes{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.login-modes button{background:none;border:1.5px solid #111;color:#111;font-size:13px;font-weight:700;padding:7px 12px;cursor:pointer}
+.login-modes button.on{background:#111 !important;background-image:linear-gradient(#111,#111) !important;color:#DDDDDD !important}
 .login-form{display:flex;flex-direction:column;gap:14px}
 .login-form label{font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#111}
 .login-form input{padding:11px 14px;border:1.5px solid #111;background:#DDDDDD !important;color:#111 !important;font-size:16px;border-radius:0;outline:none}
 .login-form input:focus{box-shadow:inset 0 0 0 1px #111}
+.login-err{color:#b00020;font-size:14px;font-weight:700;min-height:20px}
 .login-submit{align-self:flex-start;background:#111 !important;background-image:linear-gradient(#111,#111) !important;color:#DDDDDD !important;border:1.5px solid #111;padding:10px 22px;font-size:14px;font-weight:700;letter-spacing:.03em;cursor:pointer}
 .login-submit:hover{opacity:.88}
+.login-submit:disabled{opacity:.5;cursor:wait}
 
 /* Wijzigingenlog (Outlook-stijl ongelezen / gelezen) */
 .log-item{border-top:1px solid var(--faint);padding:12px 10px;display:flex;flex-direction:column;gap:4px;cursor:pointer;transition:background .15s}
@@ -117,7 +123,7 @@ nav button.on{background:#111 !important;background-image:linear-gradient(#111,#
     <h1 id="home">Kwaliteitshandboek<br>Monumentaal schilderwerk</h1>
     <div class="user-bar" id="user-bar" style="display:none">
       <span>Ingelogd als <strong id="logged-user"></strong></span>
-      <button type="button" class="user-link" id="change-user">Wijzigen</button>
+      <button type="button" class="user-link" id="change-user">Uitloggen</button>
     </div>
   </div>
   <span class="mic">PlenderWestendorp</span>
@@ -125,12 +131,20 @@ nav button.on{background:#111 !important;background-image:linear-gradient(#111,#
 
 <div id="login-screen" style="display:none">
   <div class="login-wrap">
-    <h2>Welkom bij het kwaliteitshandboek</h2>
-    <p>Vul je naam in om door te gaan. Je naam wordt onthouden en bij wijzigingen vastgelegd.</p>
+    <img src="PlenderWestendorp_app-icoon_512.png" alt="PlenderWestendorp" class="login-logo">
+    <h2 id="login-title">Inloggen kwaliteitshandboek</h2>
+    <p id="login-sub">Log in met je eigen gebruikersnaam en wachtwoord. Je wordt bij elk bezoek opnieuw gevraagd in te loggen.</p>
+    <div class="login-modes">
+      <button type="button" id="mode-login" class="on">Inloggen</button>
+      <button type="button" id="mode-register">Nieuw account aanmaken</button>
+    </div>
     <form class="login-form" id="login-form">
       <label for="username-input">Gebruikersnaam</label>
-      <input id="username-input" type="text" autocomplete="name" placeholder="Vul gebruikersnaam in" required>
-      <button type="submit" class="login-submit">Doorgaan</button>
+      <input id="username-input" type="text" autocomplete="username" placeholder="Bijv. Thijs" required>
+      <label for="password-input">Wachtwoord</label>
+      <input id="password-input" type="password" autocomplete="current-password" placeholder="Vul wachtwoord in" required>
+      <div class="login-err" id="login-error"></div>
+      <button type="submit" class="login-submit" id="login-submit-btn">Inloggen</button>
     </form>
   </div>
 </div>
@@ -141,6 +155,7 @@ nav button.on{background:#111 !important;background-image:linear-gradient(#111,#
 </div>
 </div>
 <script>
+var AUTH_API = "https://kwaliteit-auth.thijsdemoor.workers.dev";
 var ERM_API = "https://erm-updates.thijsdemoor.workers.dev";
 var SYNC_BINDING = "CLOUD_WIJZIGINGEN_GEBRUIKER";
 var SYNC_API = "https://cloudwijzigingengebruiker.thijsdemoor.workers.dev";
@@ -166,13 +181,13 @@ var K=[
 ["t","URL’s (zoals URL 4009): regels voor het werk","Een URL (Uitvoeringsrichtlijn) gaat over het werk op de bouwplaats zelf. Voor schilderwerk is dat URL 4009. Zo blijft het verschil duidelijk tussen de kwaliteit van het bedrijf (BRL) en de kwaliteit van het schilderwerk (URL)."]]}];
 
 var KEY="cobalt_kwaliteit_status_v3",META_KEY="cobalt_kwaliteit_meta_v1",ERM_CACHE_KEY="cobalt_erm_cache_v1",ERM_SEEN_KEY="cobalt_erm_seen_v1",USER_KEY="cobalt_kwaliteit_user_v1",LOG_KEY="cobalt_kwaliteit_log_v1",READ_KEY="cobalt_kwaliteit_read_v1";
-var S={},L=[],readIds=[],currentUser="",lastUpdatedAt="",view="d",ch=0,ar=0,ermFilter="rel",rsArmed=false,rsTimer=null,syncStatus="",savingInFlight=false;
+var S={},L=[],readIds=[],currentUser="",authMode="login",lastUpdatedAt="",view="d",ch=0,ar=0,ermFilter="rel",rsArmed=false,rsTimer=null,syncStatus="",savingInFlight=false;
 var ermState={loading:false,error:null,data:null,offline:false,newCount:0,changedCodes:{}};
 
+try{localStorage.removeItem(USER_KEY)}catch(e){}
 try{S=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){}
 try{L=JSON.parse(localStorage.getItem(LOG_KEY))||[];if(!Array.isArray(L))L=[]}catch(e){L=[]}
 try{readIds=JSON.parse(localStorage.getItem(READ_KEY))||[];if(!Array.isArray(readIds))readIds=[]}catch(e){readIds=[]}
-try{currentUser=String(localStorage.getItem(USER_KEY)||"").trim()}catch(e){}
 try{lastUpdatedAt=localStorage.getItem(META_KEY)||""}catch(e){}
 try{ermState.data=JSON.parse(localStorage.getItem(ERM_CACHE_KEY))||null}catch(e){}
 
@@ -337,6 +352,25 @@ function safeUrl(u){return /^https?:\/\//i.test(String(u||""))?u:"https://www.st
 function fmtTime(iso){if(!iso)return"";var d=new Date(iso);if(isNaN(d))return"";return d.toLocaleDateString("nl-NL")+" om "+d.toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"})}
 function isConfigured(){return ERM_API&&ERM_API.indexOf("PLAK_HIER")===-1&&/^https?:\/\//i.test(ERM_API)}
 
+function setAuthMode(mode){
+  authMode=mode;
+  document.getElementById("mode-login").classList.toggle("on",mode==="login");
+  document.getElementById("mode-register").classList.toggle("on",mode==="register");
+  document.getElementById("login-title").textContent=
+    mode==="login"?"Inloggen kwaliteitshandboek":"Nieuw account aanmaken";
+  document.getElementById("login-sub").textContent=
+    mode==="login"
+      ?"Log in met je eigen gebruikersnaam en wachtwoord. Je wordt bij elk bezoek opnieuw gevraagd in te loggen."
+      :"Kies een persoonlijke gebruikersnaam en wachtwoord. Cloudflare onthoudt dit voor je volgende bezoeken.";
+  document.getElementById("login-submit-btn").textContent=
+    mode==="login"?"Inloggen":"Account opslaan & doorgaan";
+  document.getElementById("password-input").setAttribute(
+    "autocomplete",
+    mode==="login"?"current-password":"new-password"
+  );
+  document.getElementById("login-error").textContent="";
+}
+
 function syncLoginState(){
   var loginEl=document.getElementById("login-screen");
   var appEl=document.getElementById("app-shell");
@@ -358,9 +392,9 @@ function setUserName(name){
   var clean=String(name||"").trim();
   if(!clean)return;
   currentUser=clean;
-  try{localStorage.setItem(USER_KEY,currentUser)}catch(e){}
   syncLoginState();
   render();
+  loadSharedStatuses(false);
   loadReadIds();
 }
 
@@ -394,8 +428,9 @@ function markErmSeen(){
 
 function loadErm(force){
   if(!isConfigured())return;
+  if(ermState.loading)return;
   ermState.loading=true;ermState.error=null;ermState.offline=false;
-  if(view=="k"&&ar===0)render();
+  if(currentUser&&view=="k"&&ar===0)render();
   var sep=force?"?refresh=1&":"?";
   var url=ERM_API.replace(/\/+$/,"")+sep+"_t="+Date.now();
   fetch(url,{cache:"no-store"}).then(function(res){
@@ -408,13 +443,13 @@ function loadErm(force){
     ermState.offline=false;
     try{localStorage.setItem(ERM_CACHE_KEY,JSON.stringify(data))}catch(e){}
     checkUpdates(data);
-    if(view=="k"&&ar===0)markErmSeen();
-    render();
+    if(currentUser&&view=="k"&&ar===0)markErmSeen();
+    if(currentUser)render();
   }).catch(function(){
     ermState.loading=false;
     ermState.offline=!!ermState.data;
     ermState.error="Kan nu geen live verbinding maken met Stichting ERM.";
-    render();
+    if(currentUser)render();
   });
 }
 
@@ -533,22 +568,65 @@ function render(){
 }
 function go(v){rsArmed=false;clearTimeout(rsTimer);view=v;if(v=="k"&&ar===0)markErmSeen();render();loadSharedStatuses(true);loadReadIds();window.scrollTo(0,0)}
 
+document.getElementById("mode-login").addEventListener("click",function(){setAuthMode("login")});
+document.getElementById("mode-register").addEventListener("click",function(){setAuthMode("register")});
+
 document.getElementById("login-form").addEventListener("submit",function(e){
   e.preventDefault();
-  var inp=document.getElementById("username-input");
-  var val=String(inp.value||"").trim();
-  if(!val){inp.focus();return;}
-  setUserName(val);
+  var userInp=document.getElementById("username-input");
+  var passInp=document.getElementById("password-input");
+  var errEl=document.getElementById("login-error");
+  var btn=document.getElementById("login-submit-btn");
+
+  var username=String(userInp.value||"").trim();
+  var password=String(passInp.value||"");
+
+  if(!username||!password){
+    errEl.textContent="Vul zowel je gebruikersnaam als wachtwoord in.";
+    return;
+  }
+
+  errEl.textContent="";
+  btn.disabled=true;
+  btn.textContent="Bezig met controleren…";
+
+  fetch(AUTH_API,{
+    method:"POST",
+    cache:"no-store",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      mode:authMode,
+      username:username,
+      password:password
+    })
+  }).then(function(res){
+    return res.json().then(function(data){return {ok:res.ok,data:data}});
+  }).then(function(result){
+    btn.disabled=false;
+    setAuthMode(authMode);
+    if(!result.ok||!result.data.ok){
+      errEl.textContent=(result.data&&result.data.error)||"Inloggen mislukt.";
+      return;
+    }
+    passInp.value="";
+    setUserName(result.data.username);
+  }).catch(function(){
+    btn.disabled=false;
+    setAuthMode(authMode);
+    errEl.textContent="Kan geen verbinding maken met Cloudflare. Controleer je internet.";
+  });
 });
 
 document.getElementById("change-user").addEventListener("click",function(){
   currentUser="";
   readIds=[];
-  try{localStorage.removeItem(USER_KEY);localStorage.removeItem(READ_KEY)}catch(e){}
+  try{localStorage.removeItem(READ_KEY)}catch(e){}
   syncLoginState();
-  var inp=document.getElementById("username-input");
-  inp.value="";
-  setTimeout(function(){inp.focus();},20);
+  document.getElementById("username-input").value="";
+  document.getElementById("password-input").value="";
+  document.getElementById("login-error").textContent="";
+  setAuthMode("login");
+  setTimeout(function(){document.getElementById("username-input").focus()},20);
 });
 
 document.addEventListener("click",function(e){
@@ -579,7 +657,7 @@ document.addEventListener("click",function(e){
   else if(d.c!==undefined){ch=+d.c;go("a")}
   else if(d.a!==undefined){ar=+d.a;go("k")}
 });
-document.getElementById("home").addEventListener("click",function(){go("d")});
+document.getElementById("home").addEventListener("click",function(){if(currentUser)go("d")});
 document.addEventListener("change",function(e){
   var s=e.target.dataset.s;
   if(!s)return;
@@ -594,16 +672,23 @@ document.addEventListener("change",function(e){
   render();
 });
 
+setAuthMode("login");
 syncLoginState();
-if(currentUser){
-  render();
-  loadSharedStatuses(false);
-  loadReadIds();
-}
 loadErm(false);
 
 if(hasSync()){
   setInterval(function(){if(document.visibilityState==="visible"&&currentUser){loadSharedStatuses(true);loadReadIds()}},15000);
+}
+
+if(isConfigured()){
+  setInterval(function(){if(document.visibilityState==="visible"&&currentUser){loadErm(false)}},300000);
+  document.addEventListener("visibilitychange",function(){
+    if(document.visibilityState==="visible"&&currentUser){
+      loadErm(false);
+      loadSharedStatuses(true);
+      loadReadIds();
+    }
+  });
 }
 
 if("serviceWorker" in navigator){
