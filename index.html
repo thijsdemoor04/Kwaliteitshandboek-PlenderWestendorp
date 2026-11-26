@@ -65,12 +65,21 @@ nav button.on{background:#111 !important;background-image:linear-gradient(#111,#
 .ci .tx{font-size:15px;color:#111}
 .bl{border-top:1.5px solid #111;padding:14px 0 18px;transition:background .4s}
 .bl.hl{background:var(--hov)}
+.bl.erm-read{opacity:.75}
 .tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border:1.5px solid #111;margin-bottom:8px;margin-right:6px;color:#111}
 .bl.e .tag,.tag.inv{background:#111 !important;background-image:linear-gradient(#111,#111) !important;color:#DDDDDD !important}
 .tag.new{background:var(--busy) !important;color:#111 !important;border-color:#111}
 .bl h4{font-family:var(--serif);font-weight:400;font-size:21px;line-height:1.15;margin-bottom:5px;color:#111}
 .bl p{font-size:15.5px;max-width:70ch;color:#111}
 .bl a{color:#111;font-size:14px;font-weight:600;display:inline-block;margin-top:8px;text-underline-offset:3px}
+.erm-row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.erm-body{flex:1;min-width:0}
+.erm-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:8px}
+.erm-actions a{margin-top:0}
+.erm-check-btn{background:none;border:1.5px solid #111;color:#111;font-size:13px;font-weight:700;padding:5px 11px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;flex:none}
+.erm-check-btn:hover{background:var(--hov)}
+.erm-check-btn.checked{background:var(--done) !important;background-image:linear-gradient(var(--done),var(--done)) !important;color:#111 !important;border-color:#111}
+.erm-done-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:2px 8px;border:1.5px solid #111;background:var(--done) !important;color:#111 !important;margin-bottom:8px;margin-right:6px}
 .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:18px}
 .tabs{display:flex;gap:8px;flex-wrap:wrap}
 .btn{background:none;border:1.5px solid #111;color:#111;font-size:13px;font-weight:600;padding:6px 12px;cursor:pointer}
@@ -113,7 +122,7 @@ nav button.on{background:#111 !important;background-image:linear-gradient(#111,#
 .log-date{font-size:12px;opacity:.7;font-weight:600}
 .log-desc{font-size:15px;color:#111}
 
-@media(max-width:760px){.lay{flex-direction:column}.menu{flex:none;width:100%;border-right:0;border-bottom:1.5px solid #111;padding:0 0 10px;position:static}.ci{flex-wrap:wrap}}
+@media(max-width:760px){.lay{flex-direction:column}.menu{flex:none;width:100%;border-right:0;border-bottom:1.5px solid #111;padding:0 0 10px;position:static}.ci{flex-wrap:wrap}.erm-row{flex-direction:column}}
 </style>
 </head>
 <body>
@@ -140,7 +149,7 @@ nav button.on{background:#111 !important;background-image:linear-gradient(#111,#
     </div>
     <form class="login-form" id="login-form">
       <label for="username-input">Gebruikersnaam</label>
-      <input id="username-input" type="text" autocomplete="username" placeholder="Bijv. Thijs" required>
+      <input id="username-input" type="text" autocomplete="username" placeholder="Vul gebruikersnaam in" required>
       <label for="password-input">Wachtwoord</label>
       <input id="password-input" type="password" autocomplete="current-password" placeholder="Vul wachtwoord in" required>
       <div class="login-err" id="login-error"></div>
@@ -181,7 +190,7 @@ var K=[
 ["t","URL’s (zoals URL 4009): regels voor het werk","Een URL (Uitvoeringsrichtlijn) gaat over het werk op de bouwplaats zelf. Voor schilderwerk is dat URL 4009. Zo blijft het verschil duidelijk tussen de kwaliteit van het bedrijf (BRL) en de kwaliteit van het schilderwerk (URL)."]]}];
 
 var KEY="cobalt_kwaliteit_status_v3",META_KEY="cobalt_kwaliteit_meta_v1",ERM_CACHE_KEY="cobalt_erm_cache_v1",ERM_SEEN_KEY="cobalt_erm_seen_v1",USER_KEY="cobalt_kwaliteit_user_v1",LOG_KEY="cobalt_kwaliteit_log_v1",READ_KEY="cobalt_kwaliteit_read_v1";
-var S={},L=[],readIds=[],currentUser="",authMode="login",lastUpdatedAt="",view="d",ch=0,ar=0,ermFilter="rel",rsArmed=false,rsTimer=null,syncStatus="",savingInFlight=false;
+var S={},L=[],readIds=[],currentUser="",authMode="login",lastUpdatedAt="",view="d",ch=0,ar=0,ermFilter="all",rsArmed=false,rsTimer=null,syncStatus="",savingInFlight=false;
 var ermState={loading:false,error:null,data:null,offline:false,newCount:0,changedCodes:{}};
 
 try{localStorage.removeItem(USER_KEY)}catch(e){}
@@ -203,6 +212,54 @@ function isLogRead(id){
 
 function getUnreadCount(){
   return L.filter(function(item){return !isLogRead(item.id)}).length;
+}
+
+function ermArticleKey(url){
+  return "erm:"+String(url||"").trim();
+}
+
+function isErmArticleRead(url){
+  if(!url)return false;
+  return readIds.indexOf(ermArticleKey(url))!==-1;
+}
+
+function getUnreadErmNewsCount(){
+  if(!ermState.data||!Array.isArray(ermState.data.nieuws))return 0;
+  return ermState.data.nieuws.filter(function(n){return !isErmArticleRead(n.url)}).length;
+}
+
+function toggleErmArticleRead(url,forceRead){
+  if(!url)return;
+  var key=ermArticleKey(url);
+  var idx=readIds.indexOf(key);
+  if(forceRead===true){
+    if(idx!==-1)return;
+    readIds.push(key);
+  }else if(idx===-1){
+    readIds.push(key);
+  }else{
+    readIds.splice(idx,1);
+  }
+  if(readIds.length>1000)readIds=readIds.slice(-1000);
+  saveReadIds();
+  render();
+}
+
+function markAllErmNewsRead(){
+  if(!ermState.data||!Array.isArray(ermState.data.nieuws))return;
+  var changed=false;
+  ermState.data.nieuws.forEach(function(n){
+    var key=ermArticleKey(n.url);
+    if(n.url&&readIds.indexOf(key)===-1){
+      readIds.push(key);
+      changed=true;
+    }
+  });
+  if(changed){
+    if(readIds.length>1000)readIds=readIds.slice(-1000);
+    saveReadIds();
+    render();
+  }
 }
 
 function saveReadIds(){
@@ -238,7 +295,7 @@ function loadReadIds(){
 function markLogRead(id){
   if(!id||isLogRead(id))return;
   readIds.push(id);
-  if(readIds.length>500)readIds=readIds.slice(-500);
+  if(readIds.length>1000)readIds=readIds.slice(-1000);
   saveReadIds();
   render();
 }
@@ -252,7 +309,7 @@ function markAllLogsRead(){
     }
   });
   if(changed){
-    if(readIds.length>500)readIds=readIds.slice(-500);
+    if(readIds.length>1000)readIds=readIds.slice(-1000);
     saveReadIds();
     render();
   }
@@ -392,6 +449,7 @@ function setUserName(name){
   var clean=String(name||"").trim();
   if(!clean)return;
   currentUser=clean;
+  readIds=[];
   syncLoginState();
   render();
   loadSharedStatuses(false);
@@ -406,11 +464,6 @@ function checkUpdates(data){
     (data.richtlijnen||[]).forEach(function(r){
       var sig=r.versie+"|"+r.datum;
       if(seen.versions[r.code]&&seen.versions[r.code]!==sig){changed[r.code]=true;count++}
-    });
-  }
-  if(seen.urls){
-    (data.nieuws||[]).forEach(function(n){
-      if(n.relevant&&seen.urls.indexOf(n.url)===-1)count++;
     });
   }
   ermState.changedCodes=changed;
@@ -469,7 +522,8 @@ function pie(r,n){if(!n)return "var(--paper)";var a=r.done/n*100,b=a+r.busy/n*10
 function lg(r){return '<span><i class="dot" style="background:var(--done)"></i>'+r.done+' afgerond</span><span><i class="dot" style="background:var(--busy)"></i>'+r.busy+' bezig</span><span><i class="dot" style="background:var(--todo)"></i>'+r.todo+' te doen</span>'}
 
 function nav(){
-  var nb=ermState.newCount>0?'<span class="badge">'+ermState.newCount+' nieuw</span>':"";
+  var unreadErm=getUnreadErmNewsCount()+ermState.newCount;
+  var nb=unreadErm>0?'<span class="badge">'+unreadErm+'</span>':"";
   var unread=getUnreadCount();
   var lb=unread>0?'<span class="badge">'+unread+'</span>':"";
   document.getElementById("nav").innerHTML=[
@@ -533,20 +587,34 @@ function ermLive(){
       }).join("")+'</div>';
 
     var allNews=ermState.data.nieuws||[];
+    var unreadNews=allNews.filter(function(n){return !isErmArticleRead(n.url)});
     var relNews=allNews.filter(function(n){return n.relevant});
-    var list=ermFilter=="rel"?relNews:allNews;
+    var readCount=allNews.length-unreadNews.length;
+    var list=ermFilter=="unread"?unreadNews:ermFilter=="rel"?relNews:allNews;
 
-    out+='<div class="bar"><div class="sec" style="margin:0">Laatste ERM-nieuws</div><div class="tabs">'+
+    out+='<div class="bar"><div class="sec" style="margin:0">ERM-nieuwsartikelen ('+readCount+' van '+allNews.length+' afgevinkt door '+esc(currentUser)+')</div><div class="tabs">'+
+      '<button class="btn'+(ermFilter=="all"?" on":"")+'" data-ef="all">Alle artikelen ('+allNews.length+')</button>'+
+      '<button class="btn'+(ermFilter=="unread"?" on":"")+'" data-ef="unread">Nog te lezen ('+unreadNews.length+')</button>'+
       '<button class="btn'+(ermFilter=="rel"?" on":"")+'" data-ef="rel">Schilderwerk &amp; richtlijnen ('+relNews.length+')</button>'+
-      '<button class="btn'+(ermFilter=="all"?" on":"")+'" data-ef="all">Al het ERM-nieuws ('+allNews.length+')</button></div></div>';
+      (unreadNews.length>0?'<button type="button" class="btn" id="mark-all-erm-read">Alles afvinken ✓</button>':'')+
+      '</div></div>';
 
     if(!list.length){
-      out+='<div class="bl"><p>Geen specifieke berichten over schilderwerk gevonden in het meest recente ERM-nieuws. Klik op <b>Al het ERM-nieuws</b> om alle algemene berichten te zien.</p></div>';
+      out+='<div class="bl"><p>'+(ermFilter=="unread"?'Alle ERM-nieuwsartikelen zijn voor jouw account afgevinkt.':'Geen nieuwsartikelen gevonden in dit filter.')+'</p></div>';
     }else{
       out+=list.map(function(n){
-        return '<div class="bl'+(n.relevant?" e":"")+'"><span class="tag">'+(n.datum?esc(n.datum):"Actueel")+'</span>'+
+        var done=isErmArticleRead(n.url);
+        return '<div class="bl'+(n.relevant?" e":"")+(done?" erm-read":"")+'">'+
+          '<div class="erm-row"><div class="erm-body">'+
+          '<span class="tag">'+(n.datum?esc(n.datum):"Actueel")+'</span>'+
           (n.relevant?'<span class="tag">Relevant</span>':'')+
-          '<h4>'+esc(n.titel)+'</h4><a href="'+esc(safeUrl(n.url))+'" target="_blank" rel="noopener">Lees bericht op Stichting ERM →</a></div>';
+          (done?'<span class="erm-done-badge">✓ Afgevinkt</span>':'')+
+          '<h4>'+esc(n.titel)+'</h4>'+
+          '<div class="erm-actions">'+
+          '<a href="'+esc(safeUrl(n.url))+'" target="_blank" rel="noopener" data-erm-open="'+esc(n.url)+'">Lees bericht op Stichting ERM →</a>'+
+          '</div></div>'+
+          '<button type="button" class="erm-check-btn'+(done?" checked":"")+'" data-erm-toggle="'+esc(n.url)+'">'+(done?'✓ Afgevinkt':'Afvinken')+'</button>'+
+          '</div></div>';
       }).join("");
     }
   }
@@ -554,8 +622,9 @@ function ermLive(){
 }
 
 function kc(){var a=K[ar];
+var unreadErm=getUnreadErmNewsCount();
 var m='<div class="menu">'+K.map(function(x,i){
-  var sub=x.live?'<small>'+(ermState.newCount>0?ermState.newCount+' nieuwe update(s)':'Live van Stichting ERM')+'</small>':"";
+  var sub=x.live?'<small>'+(unreadErm>0?unreadErm+' nog te lezen artikel(en)':'Alles afgevinkt ✓')+'</small>':"";
   return '<button data-a="'+i+'" class="'+(i==ar?"on":"")+'">'+x.n+sub+'</button>';
 }).join("")+'</div>';
 if(a.live){return '<div class="lay">'+m+'<div class="main">'+ermLive()+'</div></div>'}
@@ -633,6 +702,11 @@ document.getElementById("change-user").addEventListener("click",function(){
 });
 
 document.addEventListener("click",function(e){
+  var openLink=e.target.closest("a[data-erm-open]");
+  if(openLink){
+    toggleErmArticleRead(openLink.dataset.ermOpen,true);
+    return;
+  }
   var logEl=e.target.closest(".log-item[data-log-id]");
   if(logEl){
     markLogRead(logEl.dataset.logId);
@@ -640,6 +714,8 @@ document.addEventListener("click",function(e){
   }
   var t=e.target.closest("button");if(!t)return;var d=t.dataset;
   if(t.id=="mark-all-read")return markAllLogsRead();
+  if(t.id=="mark-all-erm-read")return markAllErmNewsRead();
+  if(d.ermToggle!==undefined)return toggleErmArticleRead(d.ermToggle);
   if(t.id=="home")return go("d");
   if(t.id=="erm-ref"){loadSharedStatuses(false);loadReadIds();return loadErm(true)}
   if(t.id=="rs"){
