@@ -694,13 +694,8 @@ nav button.on{
   font-weight:400;
   font-size:clamp(26px,3.2vw,36px);
   line-height:1.12;
-  margin-bottom:10px;
+  margin-bottom:18px;
   color:#111;
-}
-.login-wrap p{
-  font-size:15px;
-  color:var(--muted);
-  margin-bottom:20px;
 }
 .login-modes{
   display:flex;
@@ -852,14 +847,12 @@ nav button.on{
       </div>
     </div>
   </div>
-  <span class="mic">PlenderWestendorp</span>
 </div>
 
 <div id="login-screen" style="display:none">
   <div class="login-wrap">
     <img src="PlenderWestendorp_app-icoon_512.png" alt="PlenderWestendorp" class="login-logo pw-logo-fade">
     <h2 id="login-title">Inloggen kwaliteitshandboek</h2>
-    <p id="login-sub">Log in met je eigen gebruikersnaam en wachtwoord. Je wordt bij elk bezoek opnieuw gevraagd in te loggen.</p>
     <div class="login-modes">
       <button type="button" id="mode-login" class="on">Inloggen</button>
       <button type="button" id="mode-register">Nieuw account aanmaken</button>
@@ -1402,10 +1395,6 @@ function setAuthMode(mode) {
   document.getElementById("mode-register").classList.toggle("on", mode === "register");
   document.getElementById("login-title").textContent =
     mode === "login" ? "Inloggen kwaliteitshandboek" : "Nieuw account aanmaken";
-  document.getElementById("login-sub").textContent =
-    mode === "login"
-      ? "Log in met je eigen gebruikersnaam en wachtwoord. Je wordt bij elk bezoek opnieuw gevraagd in te loggen."
-      : "Kies een persoonlijke gebruikersnaam en wachtwoord. Cloudflare onthoudt dit voor je volgende bezoeken.";
   document.getElementById("login-submit-btn").textContent =
     mode === "login" ? "Inloggen" : "Account opslaan & doorgaan";
   document.getElementById("password-input").setAttribute(
