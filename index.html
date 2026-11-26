@@ -583,6 +583,9 @@ nav button.on{
   justify-content:space-between;
   margin-bottom:18px;
 }
+.bar .h2{
+  margin-bottom:0;
+}
 .tabs{
   display:flex;
   gap:8px;
@@ -1807,7 +1810,7 @@ function chk() {
 
 function wijzigingen() {
   var unread = getUnreadCount();
-  var html = '<div class="bar"><div><h2 class="h2">Wijzigingenoverzicht</h2><p class="sub" style="margin-bottom:0">Klik op een wijziging om deze als gelezen te markeren (' + unread + ' ongelezen)</p></div>' +
+  var html = '<div class="bar"><h2 class="h2">Wijzigingenoverzicht</h2>' +
     (unread > 0 ? '<button type="button" class="btn" id="mark-all-read">Alles als gelezen markeren</button>' : '') +
     '</div>';
   if (!L.length) {
@@ -1850,12 +1853,9 @@ function ermLive() {
   var isLiveOk = !ermState.loading && !ermState.error && !!ermState.data && !ermState.offline;
   var lampClass = ermState.loading ? "" : (isLiveOk ? " is-live" : (ermState.error ? " is-err" : ""));
   var liveLabel = ermState.loading ? "Verversen…" : (isLiveOk ? "Live · Up-to-date" : (ermState.offline ? "Offline (cache)" : "Controleren"));
-  var refreshInfo = ermState.data && ermState.data.checkedAt
-    ? "Laatst gerefreshed: " + fmtTime(ermState.data.checkedAt)
-    : "Nog niet gerefreshed";
 
   var totalUnreadKc = getTotalUnreadKcCount();
-  var out = '<div class="bar"><div><h2 class="h2">Actueel · ERM-updates</h2><p class="sub" style="margin-bottom:0">' + esc(refreshInfo) + ' · Klik op een bericht om het als gelezen te markeren (' + totalUnreadKc + ' ongelezen)</p></div>' +
+  var out = '<div class="bar"><h2 class="h2">Actueel · ERM-updates</h2>' +
     '<div class="tabs"><button type="button" class="live-btn" id="erm-ref" title="Klik om nu live te refreshen"><i class="live-lamp' + lampClass + '"></i><span>' + esc(liveLabel) + '</span></button>' +
     (totalUnreadKc > 0 ? '<button type="button" class="btn" id="mark-all-kc-read">Alles als gelezen markeren</button>' : '') +
     '</div></div>';
@@ -1934,7 +1934,7 @@ function kc() {
   if (a.live) {
     return '<div class="lay">' + m + '<div class="main">' + ermLive() + '</div></div>';
   }
-  return '<div class="lay">' + m + '<div class="main"><div class="bar"><div><h2 class="h2">' + a.n + '</h2><p class="sub" style="margin-bottom:0">Klik op een onderdeel om het als gelezen te markeren (' + totalUnreadKc + ' ongelezen in kenniscentrum)</p></div>' +
+  return '<div class="lay">' + m + '<div class="main"><div class="bar"><h2 class="h2">' + a.n + '</h2>' +
     (totalUnreadKc > 0 ? '<button type="button" class="btn" id="mark-all-kc-read">Alles als gelezen markeren</button>' : '') + '</div>' +
     a.b.map(function (b, i) {
       var rk = kcBlockKey(a.id, i);
