@@ -190,6 +190,34 @@ nav button.on{
   color:#111;
 }
 
+/* Dashboard-kop met Refresh */
+.dash-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom:16px;
+}
+.dash-refresh-btn{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:9px;
+  color:#111;
+  font-size:13px;
+  font-weight:700;
+  padding:8px 15px;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  transition:background .15s,border-color .15s;
+}
+.dash-refresh-btn:hover{
+  background:var(--surface-elev);
+  border-color:#111;
+}
+
 /* Samenvattingsstrook */
 .sum{
   background:var(--surface);
@@ -1129,6 +1157,7 @@ var ermQuery = "";
 var rsArmed = false;
 var rsTimer = null;
 var savingInFlight = false;
+var dashRefreshing = false;
 
 var pendingTaskNote = null;
 var draftNotes = {};
@@ -1480,7 +1509,8 @@ function hasSync() {
   return /^https?:\/\//i.test(ACCOUNT_DATA_API.trim());
 }
 
-function save() {
+function save(opts) {
+  var isReset = !!(opts && opts.reset === true);
   lastUpdatedAt = new Date().toISOString();
   saveLocal();
   if (!hasSync() || !currentUser) {
@@ -1495,6 +1525,7 @@ function save() {
       scope: SHARED_SCOPE,
       user: currentUser,
       actor: currentUser,
+      reset: isReset,
       statuses: S,
       readByUser: readByUser,
       readIds: getUserReadIds(currentUser),
@@ -1511,7 +1542,7 @@ function save() {
     .then(function (resp) {
       if (resp && resp.ok) {
         if (resp.statuses && typeof resp.statuses === "object") {
-          S = Object.assign({}, resp.statuses, S);
+          S = isReset ? Object.assign({}, resp.statuses) : Object.assign({}, resp.statuses, S);
         }
         if (resp.readByUser && typeof resp.readByUser === "object") {
           readByUser = mergeReadByUser(resp.readByUser, readByUser);
@@ -1537,7 +1568,7 @@ function save() {
     });
 }
 
-function loadAccountData() {
+function loadAccountData(forceRender) {
   if (!hasSync() || !currentUser || savingInFlight) {
     return Promise.resolve();
   }
@@ -1571,7 +1602,7 @@ function loadAccountData() {
       var localMs = lastUpdatedAt ? Date.parse(lastUpdatedAt) : 0;
       var remoteMs = remoteTime ? Date.parse(remoteTime) : 0;
 
-      if (Object.keys(remoteStatuses).length > 0) {
+      if (Object.keys(remoteStatuses).length > 0 || (remoteMs && remoteMs >= localMs)) {
         if (!localMs || !remoteMs || remoteMs >= localMs) {
           S = Object.assign({}, remoteStatuses);
         } else {
@@ -1597,11 +1628,33 @@ function loadAccountData() {
 
       saveLocal();
 
-      if (prevS !== JSON.stringify(S) || prevL !== JSON.stringify(L) || prevR !== JSON.stringify(readByUser)) {
+      if (forceRender || prevS !== JSON.stringify(S) || prevL !== JSON.stringify(L) || prevR !== JSON.stringify(readByUser)) {
         render();
       }
     })
     .catch(function () {});
+}
+
+function refreshDashboardInPlace() {
+  if (!currentUser) {
+    return;
+  }
+  view = "d";
+  rsArmed = false;
+  clearTimeout(rsTimer);
+  pendingTaskNote = null;
+  editingLogId = "";
+  dashRefreshing = true;
+  render();
+
+  var tasks = [loadAccountData(true)];
+  if (isConfigured()) {
+    tasks.push(loadErm(false));
+  }
+  Promise.all(tasks).finally(function () {
+    dashRefreshing = false;
+    render();
+  });
 }
 
 function esc(s) {
@@ -1685,7 +1738,7 @@ function setUserName(name) {
   getUserReadIds(currentUser);
   syncLoginState();
   render();
-  loadAccountData();
+  loadAccountData(true);
 }
 
 function checkUpdates(data) {
@@ -1727,10 +1780,10 @@ function markErmSeen() {
 
 function loadErm(force) {
   if (!isConfigured()) {
-    return;
+    return Promise.resolve();
   }
   if (ermState.loading) {
-    return;
+    return Promise.resolve();
   }
   ermState.loading = true;
   ermState.error = null;
@@ -1740,7 +1793,7 @@ function loadErm(force) {
   }
   var sep = force ? "?refresh=1&" : "?";
   var url = ERM_API.replace(/\/+$/, "") + sep + "_t=" + Date.now();
-  fetch(url, { cache: "no-store" })
+  return fetch(url, { cache: "no-store" })
     .then(function (res) {
       return res.json().catch(function () {
         return {};
@@ -1846,7 +1899,9 @@ function dash() {
     }
   });
   var p = n ? Math.round(T.done / n * 100) : 0;
-  return '<div class="sum"><div class="sum-left"><div class="big">' + p + '%</div><div class="mic">van het handboek afgerond</div></div>' +
+  return '<div class="dash-head"><h2 class="h2">Dashboard</h2>' +
+    '<button type="button" class="dash-refresh-btn" id="dash-refresh">' + (dashRefreshing ? 'Verversen…' : 'Refresh') + '</button></div>' +
+    '<div class="sum"><div class="sum-left"><div class="big">' + p + '%</div><div class="mic">van het handboek afgerond</div></div>' +
     '<div class="sum-stats">' +
     [["done", "Afgerond"], ["busy", "Bezig"], ["todo", "Te doen"]].map(function (x) {
       return '<div class="it"><b>' + T[x[0]] + '</b><span><i class="dot" style="background:var(--' + x[0] + ')"></i>' + x[1] + '</span></div>';
@@ -2067,7 +2122,7 @@ function go(v) {
     markErmSeen();
   }
   render();
-  loadAccountData();
+  loadAccountData(false);
   window.scrollTo(0, 0);
 }
 
@@ -2172,6 +2227,9 @@ document.addEventListener("click", function (e) {
   var t = e.target.closest("button");
   if (t) {
     var d = t.dataset;
+    if (t.id == "dash-refresh") {
+      return refreshDashboardInPlace();
+    }
     if (d.saveNote) {
       return saveTaskWithNote(d.saveNote);
     }
@@ -2197,7 +2255,7 @@ document.addEventListener("click", function (e) {
       return go("d");
     }
     if (t.id == "erm-ref") {
-      loadAccountData();
+      loadAccountData(false);
       return loadErm(true);
     }
     if (t.id == "rs") {
@@ -2209,7 +2267,7 @@ document.addEventListener("click", function (e) {
           localStorage.removeItem(KEY);
         } catch (err) {}
         addChangeLog("Alle statussen teruggezet naar 'Te doen'.", "");
-        save();
+        save({ reset: true });
         render();
       } else {
         rsArmed = true;
@@ -2291,7 +2349,7 @@ loadErm(false);
 if (hasSync()) {
   setInterval(function () {
     if (document.visibilityState === "visible" && currentUser) {
-      loadAccountData();
+      loadAccountData(false);
     }
   }, 5000);
 }
@@ -2305,7 +2363,7 @@ if (isConfigured()) {
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "visible" && currentUser) {
       loadErm(false);
-      loadAccountData();
+      loadAccountData(false);
     }
   });
 }
