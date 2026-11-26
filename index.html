@@ -366,7 +366,7 @@ nav button.on{
   padding:24px 26px;
 }
 .main .h2{
-  margin-bottom:6px;
+  margin-bottom:14px;
 }
 .sub{
   font-size:14px;
@@ -1775,12 +1775,10 @@ function dash() {
 
 function chk() {
   var d = D[ch];
-  var r = cnt(ch);
   var m = '<div class="menu">' + D.map(function (x, i) {
     var q = cnt(i);
     return '<button data-c="' + i + '" class="' + (i == ch ? "on" : "") + '">' + x.c + '<small>' + q.done + ' / ' + x.t.length + ' afgerond</small></button>';
   }).join("") + '</div>';
-  var subTxt = r.done + ' afgerond · ' + r.busy + ' bezig · ' + r.todo + ' te doen';
   var rowsHtml = d.t.map(function (t, j) {
     var itemSid = sid(ch, j);
     var isPending = pendingTaskNote && pendingTaskNote.sid === itemSid;
@@ -1804,7 +1802,7 @@ function chk() {
       '<option value="done"' + (s == "done" ? " selected" : "") + '>Afgerond</option>' +
       '</select><div class="ci-content"><span class="no">Taak ' + String(j + 1).padStart(2, "0") + '</span><span class="tx">' + t + '</span>' + noteHtml + '</div></div>';
   }).join("");
-  return '<div class="lay">' + m + '<div class="main"><h2 class="h2">' + d.c + '</h2><p class="sub">' + esc(subTxt) + '</p>' + rowsHtml + '</div></div>';
+  return '<div class="lay">' + m + '<div class="main"><h2 class="h2">' + d.c + '</h2>' + rowsHtml + '</div></div>';
 }
 
 function wijzigingen() {
