@@ -57,25 +57,27 @@ nav button.on{background:#111 !important;background-image:linear-gradient(#111,#
 .main{flex:1;min-width:0}
 .main .h2{margin-bottom:6px}
 .sub{font-size:14px;opacity:.7;margin-bottom:18px;color:#111}
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.search-inp{padding:7px 11px;border:1.5px solid #111;background:#DDDDDD !important;color:#111 !important;font-size:14px;min-width:220px;flex:1;max-width:340px;border-radius:0;outline:none}
+.search-inp:focus{box-shadow:inset 0 0 0 1px #111}
 .ci{display:flex;gap:20px;align-items:flex-start;padding:13px 0;border-bottom:1px solid var(--faint)}
 .ci:hover{background:var(--hov)}
 .ci select{padding:5px 8px;border:1.5px solid #111;background:#DDDDDD !important;color:#111 !important;font-size:14px;font-weight:600;cursor:pointer;width:112px;border-radius:0;flex:none}
 .ci.done .tx{text-decoration:line-through;opacity:.5}
 .ci .no{font-size:12px;font-weight:600;letter-spacing:.04em;opacity:.65;display:block;margin-bottom:3px;color:#111}
 .ci .tx{font-size:15px;color:#111}
-.bl{border-top:1.5px solid #111;padding:14px 0 18px;transition:background .4s}
+.bl{border-top:1.5px solid #111;padding:14px 10px 18px;transition:background .2s;cursor:pointer}
 .bl.hl{background:var(--hov)}
-.bl.erm-read{opacity:.75}
+.bl:hover{background:var(--hov)}
+.bl.unread{border-left:4px solid #111;padding-left:14px;background:rgba(17,17,17,.04)}
+.bl.read{opacity:.72}
 .tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border:1.5px solid #111;margin-bottom:8px;margin-right:6px;color:#111}
 .bl.e .tag,.tag.inv{background:#111 !important;background-image:linear-gradient(#111,#111) !important;color:#DDDDDD !important}
 .tag.new{background:var(--busy) !important;color:#111 !important;border-color:#111}
+.item-badge-new{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;background:#111;color:#DDDDDD;margin-right:8px;vertical-align:middle}
 .bl h4{font-family:var(--serif);font-weight:400;font-size:21px;line-height:1.15;margin-bottom:5px;color:#111}
 .bl p{font-size:15.5px;max-width:70ch;color:#111}
 .bl a{color:#111;font-size:14px;font-weight:600;display:inline-block;margin-top:8px;text-underline-offset:3px}
-.erm-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}
-.erm-actions a{margin-top:0}
-.erm-tick{background:none;border:0;padding:0 2px;font-size:18px;font-weight:800;line-height:1;color:#1f9d55;cursor:pointer}
-.erm-tick:hover{opacity:.7}
 .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:18px}
 .tabs{display:flex;gap:8px;flex-wrap:wrap}
 .btn{background:none;border:1.5px solid #111;color:#111;font-size:13px;font-weight:600;padding:6px 12px;cursor:pointer}
@@ -87,7 +89,8 @@ nav button.on{background:#111 !important;background-image:linear-gradient(#111,#
 .rc a{color:#111;font-size:13px;font-weight:600;display:inline-block;margin-top:8px}
 .sec{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin:20px 0 10px;opacity:.75;color:#111}
 .back{margin-top:14px;background:none;border:1.5px solid #111;color:#111;font-size:13px;font-weight:600;padding:6px 12px;cursor:pointer}
-.rs{margin-top:44px;background:none;border:0;font-size:13px;opacity:.6;cursor:pointer;color:#111;text-decoration:underline}
+.dash-tools{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:44px}
+.rs{background:none;border:0;font-size:13px;opacity:.6;cursor:pointer;color:#111;text-decoration:underline}
 .rs.armed{opacity:1;font-weight:700;color:var(--todo);text-decoration:none;border:1.5px solid var(--todo);padding:6px 12px}
 
 /* Beginscherm / Inloggen */
@@ -180,13 +183,17 @@ var K=[
 ["t","Korte uitleg","Monumentaal schilderwerk is het onderhouden en herstellen van schilderwerk aan monumenten. Oude details, materialen en verflagen zijn vaak niet zomaar opnieuw te maken. Daarom kijk je bij elke klus eerst wat je kunt behouden, voordat je iets vervangt."],
 ["t","Duidelijke regels voor kwaliteit","Voor het werken aan monumenten gelden in Nederland vaste afspraken. Die gaan over hoe je het werk voorbereidt, hoe je het uitvoert en hoe het bedrijf is georganiseerd. Zo blijft het werk van goede kwaliteit en blijft het gebouw goed beschermd."],
 ["t","Controle door Kiwa","Kiwa is een onafhankelijke organisatie die het certificaat uitgeeft. Zij controleren regelmatig op kantoor en op projecten op locatie of het bedrijf zich aan alle afspraken houdt."]]},
-{id:"erm",n:"ERM, BRL 4000 en URL’s",b:[
+{id:"erm",n:"ERM, BRL 4000, URL 4009 & URL 2004",b:[
 ["t","Stichting ERM","Stichting ERM (Erkende Restauratiekwaliteit Monumentenzorg) is de landelijke organisatie die de regels opstelt voor onderhoud en herstel van monumenten. Het doel is dat het schilderwerk technisch goed wordt uitgevoerd én dat het gebouw zijn oorspronkelijke uitstraling behoudt."],
 ["e","BRL 4000: regels voor het bedrijf","De BRL 4000 beschrijft waar een bedrijf aan moet voldoen om een certificaat te krijgen. Er wordt onder andere gekeken naar de opleiding van medewerkers, aantoonbare ervaring met monumenten, vaste werkafspraken, eigen controles en een goede administratie (zoals dit kwaliteitshandboek)."],
-["t","URL’s (zoals URL 4009): regels voor het werk","Een URL (Uitvoeringsrichtlijn) gaat over het werk op de bouwplaats zelf. Voor schilderwerk is dat URL 4009. Zo blijft het verschil duidelijk tussen de kwaliteit van het bedrijf (BRL) en de kwaliteit van het schilderwerk (URL)."]]}];
+["e","URL 4009: Historisch schilderwerk","De Uitvoeringsrichtlijn URL 4009 gaat over de uitvoering van historisch schilderwerk op het werk zelf: van bouwtechnische opname en ondergrondvoorbereiding tot verfsystemen, afwerking en oplevering."],
+["e","URL 2004: Kleurhistorisch onderzoek","De Uitvoeringsrichtlijn URL 2004 beschrijft hoe kleurhistorisch onderzoek (KHO) wordt uitgevoerd om historische afwerkingslagen, kleurschema's en materiaalgebruik deskundig in kaart te brengen vóór ingrepen plaatsvinden."]]},
+{id:"ladder",n:"Restauratieladder & afwegingen",b:[
+["e","Volgorde van de restauratieladder","Bij elke ingreep aan monumentaal schilderwerk volg je de vaste volgorde: 1. Behouden en onderhouden, 2. Repareren en conserveren, 3. Gedeeltelijk vernieuwen en 4. Vervangen als laatste optie."],
+["t","Vastleggen van beslissingen","Afwijkingen of keuzes voor herstel versus vervanging worden onderbouwd in het projectdossier (zie hoofdstuk 4.1.1 en 4.1.2) zodat keuzes tijdens uitvoering en bij externe controles aantoonbaar zijn."]]}];
 
 var KEY="cobalt_kwaliteit_status_v3",META_KEY="cobalt_kwaliteit_meta_v1",ERM_CACHE_KEY="cobalt_erm_cache_v1",ERM_SEEN_KEY="cobalt_erm_seen_v1",USER_KEY="cobalt_kwaliteit_user_v1",LOG_KEY="cobalt_kwaliteit_log_v1",READ_KEY="cobalt_kwaliteit_read_v1";
-var S={},L=[],readIds=[],currentUser="",authMode="login",lastUpdatedAt="",view="d",ch=0,ar=0,ermFilter="all",rsArmed=false,rsTimer=null,syncStatus="",savingInFlight=false;
+var S={},L=[],readIds=[],currentUser="",authMode="login",lastUpdatedAt="",view="d",ch=0,ar=0,ermFilter="rel",ermQuery="",taskFilter="all",taskQuery="",rsArmed=false,rsTimer=null,syncStatus="",savingInFlight=false;
 var ermState={loading:false,error:null,data:null,offline:false,newCount:0,changedCodes:{}};
 
 try{localStorage.removeItem(USER_KEY)}catch(e){}
@@ -202,57 +209,75 @@ function statusLabel(st){
   return "Te doen";
 }
 
-function isLogRead(id){
+function isItemRead(id){
+  if(!id)return true;
   return readIds.indexOf(id)!==-1;
 }
 
 function getUnreadCount(){
-  return L.filter(function(item){return !isLogRead(item.id)}).length;
+  return L.filter(function(item){return !isItemRead(item.id)}).length;
 }
 
 function ermArticleKey(url){
   return "erm:"+String(url||"").trim();
 }
 
-function isErmArticleRead(url){
-  if(!url)return false;
-  return readIds.indexOf(ermArticleKey(url))!==-1;
+function kcBlockKey(sectionId,index){
+  return "kc:"+String(sectionId||"")+":"+index;
 }
 
-function getUnreadErmNewsCount(){
-  if(!ermState.data||!Array.isArray(ermState.data.nieuws))return 0;
-  return ermState.data.nieuws.filter(function(n){return !isErmArticleRead(n.url)}).length;
+function getRelevantErmNews(){
+  if(!ermState.data||!Array.isArray(ermState.data.nieuws))return [];
+  return ermState.data.nieuws.filter(function(n){return !!n.relevant});
 }
 
-function toggleErmArticleRead(url,forceRead){
-  if(!url)return;
-  var key=ermArticleKey(url);
-  var idx=readIds.indexOf(key);
-  if(forceRead===true){
-    if(idx!==-1)return;
-    readIds.push(key);
-  }else if(idx===-1){
-    readIds.push(key);
-  }else{
-    readIds.splice(idx,1);
-  }
-  if(readIds.length>1000)readIds=readIds.slice(-1000);
+function getUnreadRelevantErmCount(){
+  return getRelevantErmNews().filter(function(n){return !isItemRead(ermArticleKey(n.url))}).length;
+}
+
+function getUnreadKcSectionCount(sec){
+  if(!sec||sec.live||!Array.isArray(sec.b))return 0;
+  return sec.b.filter(function(_,idx){return !isItemRead(kcBlockKey(sec.id,idx))}).length;
+}
+
+function getTotalUnreadKcCount(){
+  var total=getUnreadRelevantErmCount();
+  K.forEach(function(sec){
+    if(!sec.live)total+=getUnreadKcSectionCount(sec);
+  });
+  return total;
+}
+
+function markItemRead(id){
+  if(!id||isItemRead(id))return;
+  readIds.push(id);
+  if(readIds.length>1500)readIds=readIds.slice(-1500);
   saveReadIds();
   render();
 }
 
-function markAllErmNewsRead(){
-  if(!ermState.data||!Array.isArray(ermState.data.nieuws))return;
+function markAllKcRead(){
   var changed=false;
-  ermState.data.nieuws.forEach(function(n){
+  getRelevantErmNews().forEach(function(n){
     var key=ermArticleKey(n.url);
-    if(n.url&&readIds.indexOf(key)===-1){
+    if(n.url&&!isItemRead(key)){
       readIds.push(key);
       changed=true;
     }
   });
+  K.forEach(function(sec){
+    if(!sec.live&&Array.isArray(sec.b)){
+      sec.b.forEach(function(_,idx){
+        var key=kcBlockKey(sec.id,idx);
+        if(!isItemRead(key)){
+          readIds.push(key);
+          changed=true;
+        }
+      });
+    }
+  });
   if(changed){
-    if(readIds.length>1000)readIds=readIds.slice(-1000);
+    if(readIds.length>1500)readIds=readIds.slice(-1500);
     saveReadIds();
     render();
   }
@@ -270,8 +295,8 @@ function saveReadIds(){
 }
 
 function loadReadIds(){
-  if(!currentUser||!/^https?:\/\//i.test(READ_API))return;
-  fetch(READ_API+"?user="+encodeURIComponent(currentUser)+"&_t="+Date.now(),{
+  if(!currentUser||!/^https?:\/\//i.test(READ_API))return Promise.resolve();
+  return fetch(READ_API+"?user="+encodeURIComponent(currentUser)+"&_t="+Date.now(),{
     cache:"no-store"
   }).then(function(res){
     return res.ok?res.json():null;
@@ -283,29 +308,20 @@ function loadReadIds(){
       });
       readIds=merged;
       try{localStorage.setItem(READ_KEY,JSON.stringify(readIds))}catch(e){}
-      render();
     }
   }).catch(function(){});
-}
-
-function markLogRead(id){
-  if(!id||isLogRead(id))return;
-  readIds.push(id);
-  if(readIds.length>1000)readIds=readIds.slice(-1000);
-  saveReadIds();
-  render();
 }
 
 function markAllLogsRead(){
   var changed=false;
   L.forEach(function(item){
-    if(item.id&&!isLogRead(item.id)){
+    if(item.id&&!isItemRead(item.id)){
       readIds.push(item.id);
       changed=true;
     }
   });
   if(changed){
-    if(readIds.length>1000)readIds=readIds.slice(-1000);
+    if(readIds.length>1500)readIds=readIds.slice(-1500);
     saveReadIds();
     render();
   }
@@ -448,8 +464,9 @@ function setUserName(name){
   readIds=[];
   syncLoginState();
   render();
-  loadSharedStatuses(false);
-  loadReadIds();
+  Promise.all([loadSharedStatuses(false),loadReadIds()]).then(function(){
+    if(currentUser)render();
+  });
 }
 
 function checkUpdates(data){
@@ -505,6 +522,27 @@ function loadErm(force){
   });
 }
 
+function exportCsv(){
+  var rows=[["Hoofdstuk","Taak","Status","Geexporteerd door","Datum"]];
+  var nowStr=new Date().toLocaleString("nl-NL");
+  D.forEach(function(d,i){
+    d.t.forEach(function(t,j){
+      var st=statusLabel(S[sid(i,j)]||"todo");
+      rows.push([d.c,t,st,currentUser||"",nowStr]);
+    });
+  });
+  var csv=rows.map(function(r){
+    return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"'}).join(";");
+  }).join("\r\n");
+  var blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="kwaliteitshandboek_plenderwestendorp_"+new Date().toISOString().slice(0,10)+".csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
 function sid(i,j){return "cobalt-"+i+"-"+j}
 function findTaskBySid(taskSid){
   var m=/^cobalt-(\d+)-(\d+)$/.exec(String(taskSid||""));
@@ -518,8 +556,8 @@ function pie(r,n){if(!n)return "var(--paper)";var a=r.done/n*100,b=a+r.busy/n*10
 function lg(r){return '<span><i class="dot" style="background:var(--done)"></i>'+r.done+' afgerond</span><span><i class="dot" style="background:var(--busy)"></i>'+r.busy+' bezig</span><span><i class="dot" style="background:var(--todo)"></i>'+r.todo+' te doen</span>'}
 
 function nav(){
-  var unreadErm=getUnreadErmNewsCount()+ermState.newCount;
-  var nb=unreadErm>0?'<span class="badge">'+unreadErm+'</span>':"";
+  var unreadKc=getTotalUnreadKcCount()+ermState.newCount;
+  var nb=unreadKc>0?'<span class="badge">'+unreadKc+'</span>':"";
   var unread=getUnreadCount();
   var lb=unread>0?'<span class="badge">'+unread+'</span>':"";
   document.getElementById("nav").innerHTML=[
@@ -538,13 +576,30 @@ var syncInfo=syncStatus?'<div class="sub" style="margin-bottom:14px">'+esc(syncS
 return syncInfo+'<div class="sum"><div><div class="big">'+p+'%</div><div class="mic" style="margin-top:6px">van het handboek afgerond</div></div>'+
 [["done","Afgerond"],["busy","Bezig"],["todo","Te doen"]].map(function(x){return '<div class="it"><b>'+T[x[0]]+'</b><span><i class="dot" style="background:var(--'+x[0]+')"></i>'+x[1]+'</span></div>'}).join("")+'</div>'+
 '<div class="dg">'+D.map(function(d,i){var r=cnt(i),m=d.t.length;return '<button class="dc" data-c="'+i+'"><h3 class="h2">'+d.c+'</h3><div class="row"><div class="pie" style="background:'+pie(r,m)+'"></div><div class="lg">'+lg(r)+'</div></div><span class="go">Naar afvinklijst →</span></button>'}).join("")+'</div>'+
-'<button class="rs'+(rsArmed?' armed':'')+'" id="rs">'+(rsArmed?'Zeker weten? Klik nogmaals om alles te resetten':'Alle statussen terugzetten')+'</button>'}
+'<div class="dash-tools"><button type="button" class="btn" id="export-csv">Exporteer voortgang (CSV)</button>'+
+'<button class="rs'+(rsArmed?' armed':'')+'" id="rs">'+(rsArmed?'Zeker weten? Klik nogmaals om alles te resetten':'Alle statussen terugzetten')+'</button></div>'}
 
 function chk(){var d=D[ch],r=cnt(ch);
 var m='<div class="menu">'+D.map(function(x,i){var q=cnt(i);return '<button data-c="'+i+'" class="'+(i==ch?"on":"")+'">'+x.c+'<small>'+q.done+' / '+x.t.length+' afgerond</small></button>'}).join("")+'</div>';
 var subTxt=r.done+' afgerond · '+r.busy+' bezig · '+r.todo+' te doen'+(syncStatus?' · '+syncStatus:'');
-return '<div class="lay">'+m+'<div class="main"><h2 class="h2">'+d.c+'</h2><p class="sub">'+esc(subTxt)+'</p>'+
-d.t.map(function(t,j){var s=S[sid(ch,j)]||"todo";return '<div class="ci '+(s=="done"?"done":"")+'"><select data-s="'+sid(ch,j)+'" style="border-color:'+(s=="done"?"var(--done)":s=="busy"?"var(--busy)":"#111")+'"><option value="todo"'+(s=="todo"?" selected":"")+'>Te doen</option><option value="busy"'+(s=="busy"?" selected":"")+'>Bezig</option><option value="done"'+(s=="done"?" selected":"")+'>Afgerond</option></select><div><span class="no">Taak '+String(j+1).padStart(2,"0")+'</span><span class="tx">'+t+'</span></div></div>'}).join("")+'</div></div>'}
+var q=taskQuery.trim().toLowerCase();
+var filtered=d.t.map(function(t,j){return {t:t,j:j,s:S[sid(ch,j)]||"todo"}}).filter(function(item){
+  if(taskFilter!=="all"&&item.s!==taskFilter)return false;
+  if(q&&item.t.toLowerCase().indexOf(q)===-1)return false;
+  return true;
+});
+var filterControls='<div class="filter-bar">'+
+  '<input type="search" class="search-inp" id="task-search" value="'+esc(taskQuery)+'" placeholder="Zoek binnen '+esc(d.c)+'…">'+
+  '<div class="tabs">'+
+  '<button type="button" class="btn'+(taskFilter==="all"?" on":"")+'" data-tf="all">Alle ('+d.t.length+')</button>'+
+  '<button type="button" class="btn'+(taskFilter==="todo"?" on":"")+'" data-tf="todo">Te doen ('+r.todo+')</button>'+
+  '<button type="button" class="btn'+(taskFilter==="busy"?" on":"")+'" data-tf="busy">Bezig ('+r.busy+')</button>'+
+  '<button type="button" class="btn'+(taskFilter==="done"?" on":"")+'" data-tf="done">Afgerond ('+r.done+')</button>'+
+  '</div></div>';
+var rowsHtml=filtered.length
+  ?filtered.map(function(item){var s=item.s,j=item.j,t=item.t;return '<div class="ci '+(s=="done"?"done":"")+'"><select data-s="'+sid(ch,j)+'" style="border-color:'+(s=="done"?"var(--done)":s=="busy"?"var(--busy)":"#111")+'"><option value="todo"'+(s=="todo"?" selected":"")+'>Te doen</option><option value="busy"'+(s=="busy"?" selected":"")+'>Bezig</option><option value="done"'+(s=="done"?" selected":"")+'>Afgerond</option></select><div><span class="no">Taak '+String(j+1).padStart(2,"0")+'</span><span class="tx">'+t+'</span></div></div>'}).join("")
+  :'<div class="bl read"><p>Geen taken gevonden met dit filter.</p></div>';
+return '<div class="lay">'+m+'<div class="main"><h2 class="h2">'+d.c+'</h2><p class="sub">'+esc(subTxt)+'</p>'+filterControls+rowsHtml+'</div></div>'}
 
 function wijzigingen(){
   var unread=getUnreadCount();
@@ -552,11 +607,11 @@ function wijzigingen(){
     (unread>0?'<button type="button" class="btn" id="mark-all-read">Alles als gelezen markeren</button>':'')+
     '</div>';
   if(!L.length){
-    html+='<div class="bl"><span class="tag">Nog geen wijzigingen</span><p>Zodra iemand een status in de afvinklijst aanpast of de statussen reset, verschijnt dat hier met naam en datum.</p></div>';
+    html+='<div class="bl read"><span class="tag">Nog geen wijzigingen</span><p>Zodra iemand een status in de afvinklijst aanpast of de statussen reset, verschijnt dat hier met naam en datum.</p></div>';
   }else{
     html+=L.map(function(item){
-      var read=isLogRead(item.id);
-      return '<div class="log-item '+(read?'read':'unread')+'" data-log-id="'+esc(item.id)+'">'+
+      var read=isItemRead(item.id);
+      return '<div class="log-item '+(read?'read':'unread')+'" data-read-id="'+esc(item.id)+'">'+
         '<div class="log-top"><span>'+(!read?'<span class="log-badge-new">Nieuw</span>':'')+esc(item.user)+'</span><span class="log-date">'+esc(fmtTime(item.at))+'</span></div>'+
         '<div class="log-desc">'+esc(item.desc)+'</div></div>';
     }).join("");
@@ -568,13 +623,16 @@ function ermLive(){
   var st=ermState.loading?"Bezig met ophalen bij Stichting ERM…":
     ermState.data?(ermState.offline?"Offline — laatst opgeslagen controle: ":"Laatst gecontroleerd: ")+fmtTime(ermState.data.checkedAt):
     "Nog niet gecontroleerd";
-  var out='<h2 class="h2">Actueel · ERM-updates</h2><div class="bar"><p class="sub" style="margin:0">'+esc(st)+'</p><button class="btn" id="erm-ref">'+(ermState.loading?"Laden…":"↻ Nu controleren")+'</button></div>';
+  var totalUnreadKc=getTotalUnreadKcCount();
+  var out='<div class="bar"><div><h2 class="h2">Actueel · ERM-updates</h2><p class="sub" style="margin-bottom:0">Klik op een item om het als gelezen te markeren ('+totalUnreadKc+' ongelezen in kenniscentrum)</p></div>'+
+    '<div class="tabs">'+(totalUnreadKc>0?'<button type="button" class="btn" id="mark-all-kc-read">Alles als gelezen markeren</button>':'')+
+    '<button class="btn" id="erm-ref">'+(ermState.loading?"Laden…":"↻ Nu controleren")+'</button></div></div>';
   if(ermState.error){
-    out+='<div class="bl"><span class="tag">Melding</span><p>'+esc(ermState.error)+(ermState.offline?' Hieronder staan de laatst opgeslagen gegevens.':' Controleer je internetverbinding of Worker.')+'</p></div>';
+    out+='<div class="bl read"><span class="tag">Melding</span><p>'+esc(ermState.error)+(ermState.offline?' Hieronder staan de laatst opgeslagen gegevens.':' Controleer je internetverbinding of Worker.')+'</p></div>';
   }
   if(ermState.data){
     var rl=ermState.data.richtlijnen||[];
-    out+='<div class="sec">Actuele richtlijnen &amp; monumenten (via stichtingerm.nl)</div><div class="rg">'+
+    out+='<div class="sec">Actuele richtlijnen (URL 4009, URL 2004 &amp; BRL 4000)</div><div class="rg">'+
       rl.map(function(r){
         var isNew=ermState.changedCodes[r.code];
         return '<div class="rc"><span class="tag inv">'+esc(r.code)+'</span>'+(isNew?'<span class="tag new">Nieuwe versie</span>':'')+
@@ -583,31 +641,32 @@ function ermLive(){
       }).join("")+'</div>';
 
     var allNews=ermState.data.nieuws||[];
-    var unreadNews=allNews.filter(function(n){return !isErmArticleRead(n.url)});
-    var relNews=allNews.filter(function(n){return n.relevant});
-    var readCount=allNews.length-unreadNews.length;
-    var list=ermFilter=="unread"?unreadNews:ermFilter=="rel"?relNews:allNews;
+    var relNews=getRelevantErmNews();
+    var unreadRelNews=relNews.filter(function(n){return !isItemRead(ermArticleKey(n.url))});
+    var baseList=ermFilter=="unread"?unreadRelNews:ermFilter=="all"?allNews:relNews;
+    var q=ermQuery.trim().toLowerCase();
+    var list=q?baseList.filter(function(n){return String(n.titel||"").toLowerCase().indexOf(q)!==-1}):baseList;
 
-    out+='<div class="bar"><div class="sec" style="margin:0">ERM-nieuwsartikelen ('+readCount+' van '+allNews.length+' afgevinkt door '+esc(currentUser)+')</div><div class="tabs">'+
-      '<button class="btn'+(ermFilter=="all"?" on":"")+'" data-ef="all">Alle artikelen ('+allNews.length+')</button>'+
-      '<button class="btn'+(ermFilter=="unread"?" on":"")+'" data-ef="unread">Nog te lezen ('+unreadNews.length+')</button>'+
-      '<button class="btn'+(ermFilter=="rel"?" on":"")+'" data-ef="rel">Schilderwerk &amp; richtlijnen ('+relNews.length+')</button>'+
-      (unreadNews.length>0?'<button type="button" class="btn" id="mark-all-erm-read">Alles afvinken ✓</button>':'')+
+    out+='<div class="bar"><div class="sec" style="margin:0">Schilderwerk &amp; kleurhistorisch onderzoek ('+unreadRelNews.length+' ongelezen)</div><div class="tabs">'+
+      '<button class="btn'+(ermFilter=="rel"?" on":"")+'" data-ef="rel">Schilderwerk &amp; KHO ('+relNews.length+')</button>'+
+      '<button class="btn'+(ermFilter=="unread"?" on":"")+'" data-ef="unread">Ongelezen ('+unreadRelNews.length+')</button>'+
+      '<button class="btn'+(ermFilter=="all"?" on":"")+'" data-ef="all">Al het ERM-nieuws ('+allNews.length+')</button>'+
       '</div></div>';
 
+    out+='<div class="filter-bar"><input type="search" class="search-inp" id="erm-search" value="'+esc(ermQuery)+'" placeholder="Zoek op URL 4009, URL 2004, schilderwerk, verf…"></div>';
+
     if(!list.length){
-      out+='<div class="bl"><p>'+(ermFilter=="unread"?'Alle ERM-nieuwsartikelen zijn voor jouw account afgevinkt.':'Geen nieuwsartikelen gevonden in dit filter.')+'</p></div>';
+      out+='<div class="bl read"><p>'+(ermFilter=="unread"?'Alle relevante berichten zijn als gelezen gemarkeerd.':'Geen berichten gevonden binnen dit filter.')+'</p></div>';
     }else{
       out+=list.map(function(n){
-        var done=isErmArticleRead(n.url);
-        return '<div class="bl'+(n.relevant?" e":"")+(done?" erm-read":"")+'">'+
+        var read=isItemRead(ermArticleKey(n.url));
+        return '<div class="bl'+(n.relevant?" e":"")+' '+(read?"read":"unread")+'" data-read-id="'+esc(ermArticleKey(n.url))+'">'+
+          '<div class="log-top"><span>'+(!read?'<span class="item-badge-new">Nieuw</span>':'')+
           '<span class="tag">'+(n.datum?esc(n.datum):"Actueel")+'</span>'+
-          (n.relevant?'<span class="tag">Relevant</span>':'')+
+          (n.relevant?'<span class="tag">URL 4009 / KHO</span>':'')+'</span></div>'+
           '<h4>'+esc(n.titel)+'</h4>'+
-          '<div class="erm-actions">'+
-          '<a href="'+esc(safeUrl(n.url))+'" target="_blank" rel="noopener" data-erm-open="'+esc(n.url)+'">Lees bericht op Stichting ERM →</a>'+
-          (done?'<button type="button" class="erm-tick" title="Klik om vinkje weg te halen" data-erm-toggle="'+esc(n.url)+'">✓</button>':'')+
-          '</div></div>';
+          '<a href="'+esc(safeUrl(n.url))+'" target="_blank" rel="noopener">Lees bericht op Stichting ERM →</a>'+
+          '</div>';
       }).join("");
     }
   }
@@ -615,14 +674,23 @@ function ermLive(){
 }
 
 function kc(){var a=K[ar];
-var unreadErm=getUnreadErmNewsCount();
+var totalUnreadKc=getTotalUnreadKcCount();
 var m='<div class="menu">'+K.map(function(x,i){
-  var sub=x.live?'<small>'+(unreadErm>0?unreadErm+' nog te lezen artikel(en)':'Alles afgevinkt ✓')+'</small>':"";
+  var u=x.live?getUnreadRelevantErmCount():getUnreadKcSectionCount(x);
+  var sub=u>0?'<small>'+u+' ongelezen</small>':'<small>Gelezen</small>';
   return '<button data-a="'+i+'" class="'+(i==ar?"on":"")+'">'+x.n+sub+'</button>';
 }).join("")+'</div>';
 if(a.live){return '<div class="lay">'+m+'<div class="main">'+ermLive()+'</div></div>'}
-return '<div class="lay">'+m+'<div class="main"><h2 class="h2">'+a.n+'</h2><p class="sub">Algemene uitleg over monumentaal schilderwerk</p>'+
-a.b.map(function(b,i){return '<div class="bl '+b[0]+'" id="bl-'+i+'"><span class="tag">'+(b[0]=="e"?"Eis":"Toelichting")+'</span><h4>'+b[1]+'</h4><p>'+b[2]+'</p></div>'}).join("")+
+return '<div class="lay">'+m+'<div class="main"><div class="bar"><div><h2 class="h2">'+a.n+'</h2><p class="sub" style="margin-bottom:0">Klik op een onderdeel om het als gelezen te markeren ('+totalUnreadKc+' ongelezen in kenniscentrum)</p></div>'+
+(totalUnreadKc>0?'<button type="button" class="btn" id="mark-all-kc-read">Alles als gelezen markeren</button>':'')+'</div>'+
+a.b.map(function(b,i){
+  var rk=kcBlockKey(a.id,i);
+  var read=isItemRead(rk);
+  return '<div class="bl '+b[0]+' '+(read?'read':'unread')+'" id="bl-'+i+'" data-read-id="'+esc(rk)+'">'+
+    '<div class="log-top"><span>'+(!read?'<span class="item-badge-new">Nieuw</span>':'')+
+    '<span class="tag">'+(b[0]=="e"?"Eis":"Toelichting")+'</span></span></div>'+
+    '<h4>'+b[1]+'</h4><p>'+b[2]+'</p></div>';
+}).join("")+
 '<button class="back" data-v="a">← Terug naar afvinklijst</button></div></div>'}
 
 function render(){
@@ -631,7 +699,7 @@ function render(){
   nav();
   document.getElementById("v").innerHTML=view=="d"?dash():view=="a"?chk():view=="w"?wijzigingen():kc();
 }
-function go(v){rsArmed=false;clearTimeout(rsTimer);view=v;if(v=="k"&&ar===0)markErmSeen();render();loadSharedStatuses(true);loadReadIds();window.scrollTo(0,0)}
+function go(v){rsArmed=false;clearTimeout(rsTimer);view=v;if(v=="k"&&ar===0)markErmSeen();render();Promise.all([loadSharedStatuses(true),loadReadIds()]).then(function(){if(currentUser)render()});window.scrollTo(0,0)}
 
 document.getElementById("mode-login").addEventListener("click",function(){setAuthMode("login")});
 document.getElementById("mode-register").addEventListener("click",function(){setAuthMode("register")});
@@ -694,40 +762,55 @@ document.getElementById("change-user").addEventListener("click",function(){
   setTimeout(function(){document.getElementById("username-input").focus()},20);
 });
 
+document.addEventListener("input",function(e){
+  if(e.target.id==="erm-search"){
+    ermQuery=e.target.value||"";
+    var pos=e.target.selectionStart||ermQuery.length;
+    render();
+    var el=document.getElementById("erm-search");
+    if(el){el.focus();el.setSelectionRange(pos,pos);}
+  }else if(e.target.id==="task-search"){
+    taskQuery=e.target.value||"";
+    var pos2=e.target.selectionStart||taskQuery.length;
+    render();
+    var el2=document.getElementById("task-search");
+    if(el2){el2.focus();el2.setSelectionRange(pos2,pos2);}
+  }
+});
+
 document.addEventListener("click",function(e){
-  var openLink=e.target.closest("a[data-erm-open]");
-  if(openLink){
-    toggleErmArticleRead(openLink.dataset.ermOpen,true);
-    return;
-  }
-  var logEl=e.target.closest(".log-item[data-log-id]");
-  if(logEl){
-    markLogRead(logEl.dataset.logId);
-    return;
-  }
-  var t=e.target.closest("button");if(!t)return;var d=t.dataset;
-  if(t.id=="mark-all-read")return markAllLogsRead();
-  if(t.id=="mark-all-erm-read")return markAllErmNewsRead();
-  if(d.ermToggle!==undefined)return toggleErmArticleRead(d.ermToggle);
-  if(t.id=="home")return go("d");
-  if(t.id=="erm-ref"){loadSharedStatuses(false);loadReadIds();return loadErm(true)}
-  if(t.id=="rs"){
-    if(rsArmed){
-      clearTimeout(rsTimer);rsArmed=false;S={};
-      try{localStorage.removeItem(KEY)}catch(err){}
-      addChangeLog("Alle statussen teruggezet naar 'Te doen'.");
-      save();render();
-    }else{
-      rsArmed=true;clearTimeout(rsTimer);
-      rsTimer=setTimeout(function(){rsArmed=false;if(view=="d")render()},5000);
-      render();
+  var t=e.target.closest("button");
+  if(t){
+    var d=t.dataset;
+    if(t.id=="export-csv")return exportCsv();
+    if(t.id=="mark-all-read")return markAllLogsRead();
+    if(t.id=="mark-all-kc-read")return markAllKcRead();
+    if(t.id=="home")return go("d");
+    if(t.id=="erm-ref"){Promise.all([loadSharedStatuses(false),loadReadIds()]).then(function(){if(currentUser)render()});return loadErm(true)}
+    if(t.id=="rs"){
+      if(rsArmed){
+        clearTimeout(rsTimer);rsArmed=false;S={};
+        try{localStorage.removeItem(KEY)}catch(err){}
+        addChangeLog("Alle statussen teruggezet naar 'Te doen'.");
+        save();render();
+      }else{
+        rsArmed=true;clearTimeout(rsTimer);
+        rsTimer=setTimeout(function(){rsArmed=false;if(view=="d")render()},5000);
+        render();
+      }
+      return;
     }
-    return;
+    if(d.ef){ermFilter=d.ef;return render()}
+    if(d.tf){taskFilter=d.tf;return render()}
+    if(d.v)return go(d.v);
+    if(d.c!==undefined){ch=+d.c;taskFilter="all";taskQuery="";return go("a")}
+    if(d.a!==undefined){ar=+d.a;return go("k")}
   }
-  if(d.ef){ermFilter=d.ef;return render()}
-  if(d.v)go(d.v);
-  else if(d.c!==undefined){ch=+d.c;go("a")}
-  else if(d.a!==undefined){ar=+d.a;go("k")}
+
+  var readEl=e.target.closest("[data-read-id]");
+  if(readEl){
+    markItemRead(readEl.dataset.readId);
+  }
 });
 document.getElementById("home").addEventListener("click",function(){if(currentUser)go("d")});
 document.addEventListener("change",function(e){
@@ -749,7 +832,7 @@ syncLoginState();
 loadErm(false);
 
 if(hasSync()){
-  setInterval(function(){if(document.visibilityState==="visible"&&currentUser){loadSharedStatuses(true);loadReadIds()}},15000);
+  setInterval(function(){if(document.visibilityState==="visible"&&currentUser){Promise.all([loadSharedStatuses(true),loadReadIds()]).then(function(){if(currentUser)render()})}},15000);
 }
 
 if(isConfigured()){
@@ -757,8 +840,7 @@ if(isConfigured()){
   document.addEventListener("visibilitychange",function(){
     if(document.visibilityState==="visible"&&currentUser){
       loadErm(false);
-      loadSharedStatuses(true);
-      loadReadIds();
+      Promise.all([loadSharedStatuses(true),loadReadIds()]).then(function(){if(currentUser)render()});
     }
   });
 }
