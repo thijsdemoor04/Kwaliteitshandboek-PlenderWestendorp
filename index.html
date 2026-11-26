@@ -969,7 +969,7 @@ nav button.on{
 </div>
 <script>
 var AUTH_API = "https://kwaliteit-auth.thijsdemoor.workers.dev";
-var ACCOUNT_DATA_API = "https://PLAK_HIER_JOUW_CLOUDWIJZIGINGENGEBRUIKER_URL.workers.dev";
+var ACCOUNT_DATA_API = "https://kwaliteit-account-data.thijsdemoor.workers.dev";
 var ERM_API = "https://erm-updates.thijsdemoor.workers.dev";
 
 var D = [
@@ -1112,7 +1112,7 @@ var ERM_CACHE_KEY = "cobalt_erm_cache_v1";
 var ERM_SEEN_KEY = "cobalt_erm_seen_v1";
 var USER_KEY = "cobalt_kwaliteit_user_v1";
 var LOG_KEY = "cobalt_kwaliteit_log_v1";
-var READ_KEY_PREFIX = "cobalt_kwaliteit_read_v1:";
+var READ_KEY = "cobalt_kwaliteit_read_v1";
 
 var S = {};
 var L = [];
@@ -1161,34 +1161,21 @@ try {
 }
 
 try {
+  readIds = JSON.parse(localStorage.getItem(READ_KEY)) || [];
+  if (!Array.isArray(readIds)) {
+    readIds = [];
+  }
+} catch (e) {
+  readIds = [];
+}
+
+try {
   lastUpdatedAt = localStorage.getItem(META_KEY) || "";
 } catch (e) {}
 
 try {
   ermState.data = JSON.parse(localStorage.getItem(ERM_CACHE_KEY)) || null;
 } catch (e) {}
-
-function readStorageKeyForUser() {
-  return READ_KEY_PREFIX + String(currentUser || "guest").toLowerCase();
-}
-
-function loadUserReadIds() {
-  readIds = [];
-  try {
-    var parsed = JSON.parse(localStorage.getItem(readStorageKeyForUser())) || [];
-    if (Array.isArray(parsed)) {
-      readIds = parsed;
-    }
-  } catch (e) {
-    readIds = [];
-  }
-}
-
-function saveUserReadIds() {
-  try {
-    localStorage.setItem(readStorageKeyForUser(), JSON.stringify(readIds));
-  } catch (e) {}
-}
 
 function statusLabel(st) {
   if (st === "done") {
@@ -1266,7 +1253,7 @@ function markItemRead(id) {
   if (readIds.length > 1500) {
     readIds = readIds.slice(-1500);
   }
-  saveUserReadIds();
+  save();
   render();
 }
 
@@ -1294,7 +1281,7 @@ function markAllKcRead() {
     if (readIds.length > 1500) {
       readIds = readIds.slice(-1500);
     }
-    saveUserReadIds();
+    save();
     render();
   }
 }
@@ -1311,7 +1298,7 @@ function markAllLogsRead() {
     if (readIds.length > 1500) {
       readIds = readIds.slice(-1500);
     }
-    saveUserReadIds();
+    save();
     render();
   }
 }
@@ -1329,10 +1316,7 @@ function addChangeLog(description, noteText) {
   if (L.length > 250) {
     L = L.slice(0, 250);
   }
-  if (readIds.indexOf(entry.id) === -1) {
-    readIds.push(entry.id);
-    saveUserReadIds();
-  }
+  readIds.push(entry.id);
   return entry.id;
 }
 
@@ -1408,7 +1392,7 @@ function saveLocal() {
   try {
     localStorage.setItem(KEY, JSON.stringify(S));
     localStorage.setItem(LOG_KEY, JSON.stringify(L));
-    saveUserReadIds();
+    localStorage.setItem(READ_KEY, JSON.stringify(readIds));
     if (lastUpdatedAt) {
       localStorage.setItem(META_KEY, lastUpdatedAt);
     }
@@ -1417,9 +1401,6 @@ function saveLocal() {
 
 function hasSync() {
   if (typeof ACCOUNT_DATA_API !== "string") {
-    return false;
-  }
-  if (ACCOUNT_DATA_API.indexOf("PLAK_HIER") !== -1) {
     return false;
   }
   return /^https?:\/\//i.test(ACCOUNT_DATA_API.trim());
@@ -1442,6 +1423,7 @@ function save() {
     body: JSON.stringify({
       user: currentUser,
       statuses: S,
+      readIds: readIds,
       logs: L,
       updatedAt: lastUpdatedAt
     })
@@ -1456,6 +1438,9 @@ function save() {
       if (resp && resp.ok) {
         if (resp.statuses && typeof resp.statuses === "object") {
           S = resp.statuses;
+        }
+        if (Array.isArray(resp.readIds)) {
+          readIds = resp.readIds;
         }
         if (Array.isArray(resp.logs)) {
           L = resp.logs;
@@ -1474,18 +1459,18 @@ function save() {
     });
 }
 
-function loadAccountData(forceRender) {
+function loadAccountData(silent) {
   if (!hasSync()) {
     return Promise.resolve();
   }
   if (!currentUser) {
     return Promise.resolve();
   }
-  if (savingInFlight || pendingTaskNote || editingLogId) {
+  if (savingInFlight) {
     return Promise.resolve();
   }
   var sep = ACCOUNT_DATA_API.indexOf("?") === -1 ? "?" : "&";
-  return fetch(ACCOUNT_DATA_API.trim() + sep + "_t=" + Date.now(), {
+  return fetch(ACCOUNT_DATA_API.trim() + sep + "user=" + encodeURIComponent(currentUser) + "&_t=" + Date.now(), {
     cache: "no-store"
   })
     .then(function (res) {
@@ -1495,29 +1480,42 @@ function loadAccountData(forceRender) {
       return res.json();
     })
     .then(function (payload) {
-      if (savingInFlight || pendingTaskNote || editingLogId || !payload || typeof payload !== "object") {
+      if (savingInFlight || !payload || !payload.ok) {
         return;
       }
       var remoteStatuses = (payload.statuses && typeof payload.statuses === "object") ? payload.statuses : {};
+      var remoteRead = Array.isArray(payload.readIds) ? payload.readIds : [];
       var remoteLogs = Array.isArray(payload.logs) ? payload.logs : [];
       var remoteTime = payload.updatedAt || "";
 
-      var changed = (
-        JSON.stringify(S) !== JSON.stringify(remoteStatuses) ||
-        JSON.stringify(L) !== JSON.stringify(remoteLogs) ||
-        (remoteTime && remoteTime !== lastUpdatedAt)
-      );
+      var localMs = lastUpdatedAt ? Date.parse(lastUpdatedAt) : 0;
+      var remoteMs = remoteTime ? Date.parse(remoteTime) : 0;
 
-      S = remoteStatuses;
-      L = remoteLogs;
-      if (remoteTime) {
-        lastUpdatedAt = remoteTime;
+      if (!localMs || !remoteMs || remoteMs >= localMs) {
+        S = remoteStatuses;
+        var mergedRead = remoteRead.slice();
+        readIds.forEach(function (id) {
+          if (mergedRead.indexOf(id) === -1) {
+            mergedRead.push(id);
+          }
+        });
+        readIds = mergedRead;
+        if (remoteLogs.length > 0 || !L.length) {
+          L = remoteLogs;
+        }
+        if (remoteTime) {
+          lastUpdatedAt = remoteTime;
+        }
+      } else {
+        remoteRead.forEach(function (id) {
+          if (readIds.indexOf(id) === -1) {
+            readIds.push(id);
+          }
+        });
       }
 
       saveLocal();
-      if (changed || forceRender) {
-        render();
-      }
+      render();
     })
     .catch(function () {});
 }
@@ -1600,10 +1598,9 @@ function setUserName(name) {
     return;
   }
   currentUser = clean;
-  loadUserReadIds();
   syncLoginState();
   render();
-  loadAccountData(true);
+  loadAccountData(false);
 }
 
 function checkUpdates(data) {
@@ -1783,7 +1780,7 @@ function chk() {
   var d = D[ch];
   var m = '<div class="menu">' + D.map(function (x, i) {
     var q = cnt(i);
-    return '<button data-c="' + i + '" class="' + (i == ch ? "on" : "") + '">' + x.c + '<small>' + q.done + ' / ' + q.t.length + ' afgerond</small></button>';
+    return '<button data-c="' + i + '" class="' + (i == ch ? "on" : "") + '">' + x.c + '<small>' + q.done + ' / ' + x.t.length + ' afgerond</small></button>';
   }).join("") + '</div>';
   var rowsHtml = d.t.map(function (t, j) {
     var itemSid = sid(ch, j);
@@ -2051,7 +2048,6 @@ document.getElementById("login-form").addEventListener("submit", function (e) {
 
 document.getElementById("change-user").addEventListener("click", function () {
   currentUser = "";
-  readIds = [];
   pendingTaskNote = null;
   editingLogId = "";
   syncLoginState();
@@ -2115,7 +2111,7 @@ document.addEventListener("click", function (e) {
       return go("d");
     }
     if (t.id == "erm-ref") {
-      loadAccountData(true);
+      loadAccountData(false);
       return loadErm(true);
     }
     if (t.id == "rs") {
@@ -2208,10 +2204,10 @@ loadErm(false);
 
 if (hasSync()) {
   setInterval(function () {
-    if (document.visibilityState === "visible" && currentUser && !pendingTaskNote && !editingLogId) {
-      loadAccountData(false);
+    if (document.visibilityState === "visible" && currentUser) {
+      loadAccountData(true);
     }
-  }, 2000);
+  }, 15000);
 }
 
 if (isConfigured()) {
