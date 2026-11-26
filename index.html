@@ -58,7 +58,7 @@ nav button.on{background:#111 !important;background-image:linear-gradient(#111,#
 .main .h2{margin-bottom:6px}
 .sub{font-size:14px;opacity:.7;margin-bottom:18px;color:#111}
 .filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
-.search-inp{padding:7px 11px;border:1.5px solid #111;background:#DDDDDD !important;color:#111 !important;font-size:14px;min-width:220px;flex:1;max-width:340px;border-radius:0;outline:none}
+.search-inp{padding:7px 11px;border:1.5px solid #111;background:#DDDDDD !important;color:#111 !important;font-size:14px;min-width:220px;flex:1;max-width:380px;border-radius:0;outline:none}
 .search-inp:focus{box-shadow:inset 0 0 0 1px #111}
 .ci{display:flex;gap:20px;align-items:flex-start;padding:13px 0;border-bottom:1px solid var(--faint)}
 .ci:hover{background:var(--hov)}
@@ -620,11 +620,8 @@ function wijzigingen(){
 }
 
 function ermLive(){
-  var st=ermState.loading?"Bezig met ophalen bij Stichting ERM…":
-    ermState.data?(ermState.offline?"Offline — laatst opgeslagen controle: ":"Laatst gecontroleerd: ")+fmtTime(ermState.data.checkedAt):
-    "Nog niet gecontroleerd";
   var totalUnreadKc=getTotalUnreadKcCount();
-  var out='<div class="bar"><div><h2 class="h2">Actueel · ERM-updates</h2><p class="sub" style="margin-bottom:0">Klik op een item om het als gelezen te markeren ('+totalUnreadKc+' ongelezen in kenniscentrum)</p></div>'+
+  var out='<div class="bar"><div><h2 class="h2">Actueel · ERM-updates</h2><p class="sub" style="margin-bottom:0">Klik op een bericht om het als gelezen te markeren ('+totalUnreadKc+' ongelezen in kenniscentrum)</p></div>'+
     '<div class="tabs">'+(totalUnreadKc>0?'<button type="button" class="btn" id="mark-all-kc-read">Alles als gelezen markeren</button>':'')+
     '<button class="btn" id="erm-ref">'+(ermState.loading?"Laden…":"↻ Nu controleren")+'</button></div></div>';
   if(ermState.error){
@@ -645,25 +642,32 @@ function ermLive(){
     var unreadRelNews=relNews.filter(function(n){return !isItemRead(ermArticleKey(n.url))});
     var baseList=ermFilter=="unread"?unreadRelNews:ermFilter=="all"?allNews:relNews;
     var q=ermQuery.trim().toLowerCase();
-    var list=q?baseList.filter(function(n){return String(n.titel||"").toLowerCase().indexOf(q)!==-1}):baseList;
+    var list=q?baseList.filter(function(n){
+      var inTitle=String(n.titel||"").toLowerCase().indexOf(q)!==-1;
+      var inTopics=Array.isArray(n.topics)&&n.topics.some(function(tp){return String(tp).toLowerCase().indexOf(q)!==-1});
+      return inTitle||inTopics;
+    }):baseList;
 
-    out+='<div class="bar"><div class="sec" style="margin:0">Schilderwerk &amp; kleurhistorisch onderzoek ('+unreadRelNews.length+' ongelezen)</div><div class="tabs">'+
-      '<button class="btn'+(ermFilter=="rel"?" on":"")+'" data-ef="rel">Schilderwerk &amp; KHO ('+relNews.length+')</button>'+
+    out+='<div class="bar"><div class="sec" style="margin:0">BRL 4000 en URL 4009 / 2004 ('+unreadRelNews.length+' ongelezen)</div><div class="tabs">'+
+      '<button class="btn'+(ermFilter=="rel"?" on":"")+'" data-ef="rel">BRL 4000 en URL 4009 / 2004 ('+relNews.length+')</button>'+
       '<button class="btn'+(ermFilter=="unread"?" on":"")+'" data-ef="unread">Ongelezen ('+unreadRelNews.length+')</button>'+
       '<button class="btn'+(ermFilter=="all"?" on":"")+'" data-ef="all">Al het ERM-nieuws ('+allNews.length+')</button>'+
       '</div></div>';
 
-    out+='<div class="filter-bar"><input type="search" class="search-inp" id="erm-search" value="'+esc(ermQuery)+'" placeholder="Zoek op URL 4009, URL 2004, schilderwerk, verf…"></div>';
+    out+='<div class="filter-bar"><input type="search" class="search-inp" id="erm-search" value="'+esc(ermQuery)+'" placeholder="Zoek op BRL 4000, URL 4009, URL 2004, kleurhistorisch onderzoek, schilderwerk…"></div>';
 
     if(!list.length){
-      out+='<div class="bl read"><p>'+(ermFilter=="unread"?'Alle relevante berichten zijn als gelezen gemarkeerd.':'Geen berichten gevonden binnen dit filter.')+'</p></div>';
+      out+='<div class="bl read"><p>'+(ermFilter=="unread"?'Alle berichten onder BRL 4000 en URL 4009 / 2004 zijn als gelezen gemarkeerd.':'Geen berichten gevonden binnen dit filter.')+'</p></div>';
     }else{
       out+=list.map(function(n){
         var read=isItemRead(ermArticleKey(n.url));
+        var topicTags=Array.isArray(n.topics)&&n.topics.length
+          ?n.topics.slice(0,3).map(function(tp){return '<span class="tag">'+esc(tp)+'</span>'}).join("")
+          :(n.relevant?'<span class="tag">BRL 4000 / URL 4009 &amp; 2004</span>':'');
         return '<div class="bl'+(n.relevant?" e":"")+' '+(read?"read":"unread")+'" data-read-id="'+esc(ermArticleKey(n.url))+'">'+
           '<div class="log-top"><span>'+(!read?'<span class="item-badge-new">Nieuw</span>':'')+
           '<span class="tag">'+(n.datum?esc(n.datum):"Actueel")+'</span>'+
-          (n.relevant?'<span class="tag">URL 4009 / KHO</span>':'')+'</span></div>'+
+          topicTags+'</span></div>'+
           '<h4>'+esc(n.titel)+'</h4>'+
           '<a href="'+esc(safeUrl(n.url))+'" target="_blank" rel="noopener">Lees bericht op Stichting ERM →</a>'+
           '</div>';
