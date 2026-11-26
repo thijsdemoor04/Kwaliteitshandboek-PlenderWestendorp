@@ -971,6 +971,7 @@ nav button.on{
 var AUTH_API = "https://kwaliteit-auth.thijsdemoor.workers.dev";
 var ACCOUNT_DATA_API = "https://kwaliteit-account-data.thijsdemoor.workers.dev";
 var ERM_API = "https://erm-updates.thijsdemoor.workers.dev";
+var SHARED_SCOPE = "shared_handbook_v1";
 
 var D = [
   {
@@ -1106,17 +1107,17 @@ var K = [
   }
 ];
 
-var KEY = "cobalt_kwaliteit_status_v3";
-var META_KEY = "cobalt_kwaliteit_meta_v1";
+var KEY = "cobalt_kwaliteit_status_v4";
+var META_KEY = "cobalt_kwaliteit_meta_v2";
 var ERM_CACHE_KEY = "cobalt_erm_cache_v1";
 var ERM_SEEN_KEY = "cobalt_erm_seen_v1";
 var USER_KEY = "cobalt_kwaliteit_user_v1";
-var LOG_KEY = "cobalt_kwaliteit_log_v1";
-var READ_KEY = "cobalt_kwaliteit_read_v1";
+var LOG_KEY = "cobalt_kwaliteit_log_v2";
+var READ_MAP_KEY = "cobalt_kwaliteit_read_by_user_v1";
 
 var S = {};
 var L = [];
-var readIds = [];
+var readByUser = {};
 var currentUser = "";
 var authMode = "login";
 var lastUpdatedAt = "";
@@ -1161,12 +1162,12 @@ try {
 }
 
 try {
-  readIds = JSON.parse(localStorage.getItem(READ_KEY)) || [];
-  if (!Array.isArray(readIds)) {
-    readIds = [];
+  readByUser = JSON.parse(localStorage.getItem(READ_MAP_KEY)) || {};
+  if (!readByUser || typeof readByUser !== "object") {
+    readByUser = {};
   }
 } catch (e) {
-  readIds = [];
+  readByUser = {};
 }
 
 try {
@@ -1176,6 +1177,17 @@ try {
 try {
   ermState.data = JSON.parse(localStorage.getItem(ERM_CACHE_KEY)) || null;
 } catch (e) {}
+
+function getUserReadIds(userName) {
+  var u = String(userName || "").trim();
+  if (!u) {
+    return [];
+  }
+  if (!Array.isArray(readByUser[u])) {
+    readByUser[u] = [];
+  }
+  return readByUser[u];
+}
 
 function statusLabel(st) {
   if (st === "done") {
@@ -1191,7 +1203,7 @@ function isItemRead(id) {
   if (!id) {
     return true;
   }
-  return readIds.indexOf(id) !== -1;
+  return getUserReadIds(currentUser).indexOf(id) !== -1;
 }
 
 function getUnreadCount() {
@@ -1246,23 +1258,28 @@ function getTotalUnreadKcCount() {
 }
 
 function markItemRead(id) {
-  if (!id || isItemRead(id)) {
+  if (!id || !currentUser || isItemRead(id)) {
     return;
   }
-  readIds.push(id);
-  if (readIds.length > 1500) {
-    readIds = readIds.slice(-1500);
+  var arr = getUserReadIds(currentUser);
+  arr.push(id);
+  if (arr.length > 1500) {
+    readByUser[currentUser] = arr.slice(-1500);
   }
   save();
   render();
 }
 
 function markAllKcRead() {
+  if (!currentUser) {
+    return;
+  }
+  var arr = getUserReadIds(currentUser);
   var changed = false;
   getRelevantErmNews().forEach(function (n) {
     var key = ermArticleKey(n.url);
-    if (n.url && !isItemRead(key)) {
-      readIds.push(key);
+    if (n.url && arr.indexOf(key) === -1) {
+      arr.push(key);
       changed = true;
     }
   });
@@ -1270,16 +1287,16 @@ function markAllKcRead() {
     if (!sec.live && Array.isArray(sec.b)) {
       sec.b.forEach(function (_, idx) {
         var key = kcBlockKey(sec.id, idx);
-        if (!isItemRead(key)) {
-          readIds.push(key);
+        if (arr.indexOf(key) === -1) {
+          arr.push(key);
           changed = true;
         }
       });
     }
   });
   if (changed) {
-    if (readIds.length > 1500) {
-      readIds = readIds.slice(-1500);
+    if (arr.length > 1500) {
+      readByUser[currentUser] = arr.slice(-1500);
     }
     save();
     render();
@@ -1287,16 +1304,20 @@ function markAllKcRead() {
 }
 
 function markAllLogsRead() {
+  if (!currentUser) {
+    return;
+  }
+  var arr = getUserReadIds(currentUser);
   var changed = false;
   L.forEach(function (item) {
-    if (item.id && !isItemRead(item.id)) {
-      readIds.push(item.id);
+    if (item.id && arr.indexOf(item.id) === -1) {
+      arr.push(item.id);
       changed = true;
     }
   });
   if (changed) {
-    if (readIds.length > 1500) {
-      readIds = readIds.slice(-1500);
+    if (arr.length > 1500) {
+      readByUser[currentUser] = arr.slice(-1500);
     }
     save();
     render();
@@ -1305,18 +1326,22 @@ function markAllLogsRead() {
 
 function addChangeLog(description, noteText) {
   var cleanNote = String(noteText || "").trim();
+  var actor = currentUser || "Onbekend";
   var entry = {
     id: Date.now() + "-" + Math.random().toString(36).slice(2, 7),
-    user: currentUser || "Onbekend",
+    user: actor,
     at: new Date().toISOString(),
     desc: description,
     note: cleanNote
   };
   L.unshift(entry);
-  if (L.length > 250) {
-    L = L.slice(0, 250);
+  if (L.length > 300) {
+    L = L.slice(0, 300);
   }
-  readIds.push(entry.id);
+  var arr = getUserReadIds(actor);
+  if (arr.indexOf(entry.id) === -1) {
+    arr.push(entry.id);
+  }
   return entry.id;
 }
 
@@ -1382,17 +1407,66 @@ function saveEditLogNote(logId) {
     return;
   }
   item.note = String(editingLogDraft || "").trim();
+  item.editedBy = currentUser || item.user || "Onbekend";
+  item.editedAt = new Date().toISOString();
   editingLogId = "";
   editingLogDraft = "";
   save();
   render();
 }
 
+function mergeLogs(listA, listB) {
+  var map = {};
+  var merged = [];
+  [].concat(Array.isArray(listA) ? listA : [], Array.isArray(listB) ? listB : []).forEach(function (item) {
+    if (!item || !item.id) {
+      return;
+    }
+    if (!map[item.id]) {
+      map[item.id] = Object.assign({}, item);
+      merged.push(map[item.id]);
+    } else {
+      var prev = map[item.id];
+      var prevEdit = prev.editedAt ? Date.parse(prev.editedAt) : 0;
+      var nextEdit = item.editedAt ? Date.parse(item.editedAt) : 0;
+      if (nextEdit > prevEdit) {
+        map[item.id] = Object.assign({}, prev, item);
+      }
+    }
+  });
+  merged.sort(function (a, b) {
+    return (Date.parse(b.at || 0) || 0) - (Date.parse(a.at || 0) || 0);
+  });
+  return merged.slice(0, 300);
+}
+
+function mergeReadByUser(mapA, mapB) {
+  var out = {};
+  var sources = [mapA || {}, mapB || {}];
+  sources.forEach(function (src) {
+    Object.keys(src).forEach(function (u) {
+      if (!out[u]) {
+        out[u] = [];
+      }
+      var list = Array.isArray(src[u]) ? src[u] : [];
+      list.forEach(function (id) {
+        if (id && out[u].indexOf(id) === -1) {
+          out[u].push(id);
+        }
+      });
+      if (out[u].length > 1500) {
+        out[u] = out[u].slice(-1500);
+      }
+    });
+  });
+  return out;
+}
+
 function saveLocal() {
   try {
     localStorage.setItem(KEY, JSON.stringify(S));
     localStorage.setItem(LOG_KEY, JSON.stringify(L));
-    localStorage.setItem(READ_KEY, JSON.stringify(readIds));
+    localStorage.setItem(READ_MAP_KEY, JSON.stringify(readByUser));
     if (lastUpdatedAt) {
       localStorage.setItem(META_KEY, lastUpdatedAt);
     }
@@ -1409,10 +1483,7 @@ function hasSync() {
 function save() {
   lastUpdatedAt = new Date().toISOString();
   saveLocal();
-  if (!hasSync()) {
-    return;
-  }
-  if (!currentUser) {
+  if (!hasSync() || !currentUser) {
     return;
   }
   savingInFlight = true;
@@ -1421,9 +1492,12 @@ function save() {
     cache: "no-store",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      scope: SHARED_SCOPE,
       user: currentUser,
+      actor: currentUser,
       statuses: S,
-      readIds: readIds,
+      readByUser: readByUser,
+      readIds: getUserReadIds(currentUser),
       logs: L,
       updatedAt: lastUpdatedAt
     })
@@ -1437,13 +1511,17 @@ function save() {
     .then(function (resp) {
       if (resp && resp.ok) {
         if (resp.statuses && typeof resp.statuses === "object") {
-          S = resp.statuses;
+          S = Object.assign({}, resp.statuses, S);
         }
-        if (Array.isArray(resp.readIds)) {
-          readIds = resp.readIds;
+        if (resp.readByUser && typeof resp.readByUser === "object") {
+          readByUser = mergeReadByUser(resp.readByUser, readByUser);
+        } else if (Array.isArray(resp.readIds) && currentUser) {
+          var tmp = {};
+          tmp[currentUser] = resp.readIds;
+          readByUser = mergeReadByUser(tmp, readByUser);
         }
         if (Array.isArray(resp.logs)) {
-          L = resp.logs;
+          L = mergeLogs(L, resp.logs);
         }
         if (resp.updatedAt) {
           lastUpdatedAt = resp.updatedAt;
@@ -1459,20 +1537,19 @@ function save() {
     });
 }
 
-function loadAccountData(silent) {
-  if (!hasSync()) {
-    return Promise.resolve();
-  }
-  if (!currentUser) {
-    return Promise.resolve();
-  }
-  if (savingInFlight) {
+function loadAccountData() {
+  if (!hasSync() || !currentUser || savingInFlight) {
     return Promise.resolve();
   }
   var sep = ACCOUNT_DATA_API.indexOf("?") === -1 ? "?" : "&";
-  return fetch(ACCOUNT_DATA_API.trim() + sep + "user=" + encodeURIComponent(currentUser) + "&_t=" + Date.now(), {
-    cache: "no-store"
-  })
+  var url = ACCOUNT_DATA_API.trim() + sep +
+    "scope=" + encodeURIComponent(SHARED_SCOPE) +
+    "&shared=1" +
+    "&user=" + encodeURIComponent(SHARED_SCOPE) +
+    "&actor=" + encodeURIComponent(currentUser) +
+    "&_t=" + Date.now();
+
+  return fetch(url, { cache: "no-store" })
     .then(function (res) {
       if (!res.ok) {
         throw new Error("HTTP " + res.status);
@@ -1484,38 +1561,45 @@ function loadAccountData(silent) {
         return;
       }
       var remoteStatuses = (payload.statuses && typeof payload.statuses === "object") ? payload.statuses : {};
-      var remoteRead = Array.isArray(payload.readIds) ? payload.readIds : [];
       var remoteLogs = Array.isArray(payload.logs) ? payload.logs : [];
       var remoteTime = payload.updatedAt || "";
+
+      var prevS = JSON.stringify(S);
+      var prevL = JSON.stringify(L);
+      var prevR = JSON.stringify(readByUser);
 
       var localMs = lastUpdatedAt ? Date.parse(lastUpdatedAt) : 0;
       var remoteMs = remoteTime ? Date.parse(remoteTime) : 0;
 
-      if (!localMs || !remoteMs || remoteMs >= localMs) {
-        S = remoteStatuses;
-        var mergedRead = remoteRead.slice();
-        readIds.forEach(function (id) {
-          if (mergedRead.indexOf(id) === -1) {
-            mergedRead.push(id);
-          }
-        });
-        readIds = mergedRead;
-        if (remoteLogs.length > 0 || !L.length) {
-          L = remoteLogs;
+      if (Object.keys(remoteStatuses).length > 0) {
+        if (!localMs || !remoteMs || remoteMs >= localMs) {
+          S = Object.assign({}, remoteStatuses);
+        } else {
+          S = Object.assign({}, remoteStatuses, S);
         }
-        if (remoteTime) {
-          lastUpdatedAt = remoteTime;
-        }
-      } else {
-        remoteRead.forEach(function (id) {
-          if (readIds.indexOf(id) === -1) {
-            readIds.push(id);
-          }
-        });
+      }
+
+      if (remoteLogs.length > 0) {
+        L = mergeLogs(remoteLogs, L);
+      }
+
+      if (payload.readByUser && typeof payload.readByUser === "object") {
+        readByUser = mergeReadByUser(payload.readByUser, readByUser);
+      } else if (Array.isArray(payload.readIds) && currentUser) {
+        var tmp = {};
+        tmp[currentUser] = payload.readIds;
+        readByUser = mergeReadByUser(tmp, readByUser);
+      }
+
+      if (remoteTime && remoteMs > localMs) {
+        lastUpdatedAt = remoteTime;
       }
 
       saveLocal();
-      render();
+
+      if (prevS !== JSON.stringify(S) || prevL !== JSON.stringify(L) || prevR !== JSON.stringify(readByUser)) {
+        render();
+      }
     })
     .catch(function () {});
 }
@@ -1598,9 +1682,10 @@ function setUserName(name) {
     return;
   }
   currentUser = clean;
+  getUserReadIds(currentUser);
   syncLoginState();
   render();
-  loadAccountData(false);
+  loadAccountData();
 }
 
 function checkUpdates(data) {
@@ -1814,12 +1899,13 @@ function wijzigingen() {
     (unread > 0 ? '<button type="button" class="btn" id="mark-all-read">Alles als gelezen markeren</button>' : '') +
     '</div>';
   if (!L.length) {
-    html += '<div class="bl read"><span class="tag">Nog geen wijzigingen</span><p>Zodra iemand een status in de afvinklijst aanpast of de statussen reset, verschijnt dat hier met naam en datum.</p></div>';
+    html += '<div class="bl read"><span class="tag">Nog geen wijzigingen</span><p>Zodra een ingelogd account een status in de afvinklijst aanpast of de statussen reset, verschijnt dat hier met accountnaam en datum.</p></div>';
   } else {
     html += L.map(function (item) {
       var read = isItemRead(item.id);
       var hasNote = !!(item.note && String(item.note).trim());
       var isEditing = editingLogId === item.id;
+      var editedMeta = item.editedAt ? (' · bewerkt door ' + (item.editedBy || item.user) + ' op ' + fmtTime(item.editedAt)) : '';
 
       var noteSectionHtml = "";
       if (isEditing) {
@@ -1832,7 +1918,7 @@ function wijzigingen() {
           '</div></div>';
       } else if (hasNote) {
         noteSectionHtml = '<div class="log-note-block">' +
-          '<div class="log-note-title">Notitie</div>' +
+          '<div class="log-note-title">Notitie' + esc(editedMeta) + '</div>' +
           '<div class="log-note-text">' + esc(item.note) + '</div>' +
           '<div class="log-edit-bar">' +
           '<button type="button" class="btn" data-edit-log="' + esc(item.id) + '">Tekst bewerken</button>' +
@@ -1981,7 +2067,7 @@ function go(v) {
     markErmSeen();
   }
   render();
-  loadAccountData(true);
+  loadAccountData();
   window.scrollTo(0, 0);
 }
 
@@ -2111,7 +2197,7 @@ document.addEventListener("click", function (e) {
       return go("d");
     }
     if (t.id == "erm-ref") {
-      loadAccountData(false);
+      loadAccountData();
       return loadErm(true);
     }
     if (t.id == "rs") {
@@ -2205,9 +2291,9 @@ loadErm(false);
 if (hasSync()) {
   setInterval(function () {
     if (document.visibilityState === "visible" && currentUser) {
-      loadAccountData(true);
+      loadAccountData();
     }
-  }, 15000);
+  }, 5000);
 }
 
 if (isConfigured()) {
@@ -2219,7 +2305,7 @@ if (isConfigured()) {
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "visible" && currentUser) {
       loadErm(false);
-      loadAccountData(true);
+      loadAccountData();
     }
   });
 }
