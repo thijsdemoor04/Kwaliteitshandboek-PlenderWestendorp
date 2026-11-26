@@ -190,7 +190,7 @@ nav button.on{
   color:#111;
 }
 
-/* Samenvattingsstrook (geïnspireerd op hero-statistiek + horizontale sectie) */
+/* Samenvattingsstrook */
 .sum{
   background:var(--surface);
   border:1px solid var(--faint);
@@ -306,7 +306,7 @@ nav button.on{
   color:var(--muted);
 }
 
-/* Zijmenu + hoofdvlak (geïnspireerd op zijbalk + contentpaneel uit voorbeeld) */
+/* Zijmenu + hoofdvlak */
 .lay{
   display:flex;
   gap:clamp(20px,3vw,36px);
@@ -405,6 +405,7 @@ nav button.on{
   padding:14px 10px;
   border-bottom:1px solid var(--faint);
   border-radius:8px;
+  flex-wrap:wrap;
 }
 .ci:last-child{
   border-bottom:0;
@@ -428,6 +429,10 @@ nav button.on{
   text-decoration:line-through;
   opacity:.5;
 }
+.ci-content{
+  flex:1;
+  min-width:220px;
+}
 .ci .no{
   font-size:12px;
   font-weight:700;
@@ -440,6 +445,47 @@ nav button.on{
 .ci .tx{
   font-size:15px;
   color:#111;
+}
+
+/* Optioneel notitieblok bij afvinken */
+.note-box{
+  margin-top:12px;
+  padding:14px 16px;
+  background:var(--surface-elev);
+  border:1px solid var(--line);
+  border-radius:10px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  max-width:620px;
+}
+.note-label{
+  font-size:13px;
+  font-weight:700;
+  color:#111;
+}
+.note-textarea{
+  width:100%;
+  min-height:76px;
+  padding:9px 12px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#DDDDDD !important;
+  color:#111 !important;
+  font-size:14.5px;
+  line-height:1.45;
+  resize:vertical;
+  outline:none;
+}
+.note-textarea:focus{
+  border-color:#111;
+  box-shadow:0 0 0 2px rgba(17,17,17,.08);
+}
+.note-actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
 }
 
 /* Kenniscentrum & ERM-kaarten */
@@ -561,6 +607,20 @@ nav button.on{
   background-image:linear-gradient(#111,#111) !important;
   border-color:#111;
   color:#DDDDDD !important;
+}
+.btn-dark{
+  background:#111 !important;
+  background-image:linear-gradient(#111,#111) !important;
+  border:1px solid #111;
+  border-radius:8px;
+  color:#DDDDDD !important;
+  font-size:13px;
+  font-weight:700;
+  padding:7px 14px;
+  cursor:pointer;
+}
+.btn-dark:hover{
+  opacity:.88;
 }
 .live-btn{
   background:var(--surface-elev);
@@ -780,7 +840,7 @@ nav button.on{
   margin-bottom:10px;
   display:flex;
   flex-direction:column;
-  gap:4px;
+  gap:6px;
   cursor:pointer;
   transition:background .15s,border-color .15s;
 }
@@ -792,7 +852,7 @@ nav button.on{
   background:#EFEFEF;
 }
 .log-item.read{
-  opacity:.68;
+  opacity:.72;
 }
 .log-badge-new{
   display:inline-block;
@@ -824,6 +884,37 @@ nav button.on{
 .log-desc{
   font-size:15px;
   color:#111;
+}
+.log-note-block{
+  margin-top:6px;
+  padding-top:8px;
+  border-top:1px solid var(--faint);
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.log-note-title{
+  font-size:12.5px;
+  font-weight:700;
+  color:var(--muted);
+}
+.log-note-text{
+  font-size:14.5px;
+  color:#111;
+  white-space:pre-wrap;
+}
+.log-edit-bar{
+  margin-top:4px;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+.log-edit-box{
+  margin-top:6px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
 }
 
 @media(max-width:760px){
@@ -1034,6 +1125,12 @@ var ermQuery = "";
 var rsArmed = false;
 var rsTimer = null;
 var savingInFlight = false;
+
+var pendingTaskNote = null;
+var draftNotes = {};
+var editingLogId = "";
+var editingLogDraft = "";
+
 var ermState = {
   loading: false,
   error: null,
@@ -1203,18 +1300,89 @@ function markAllLogsRead() {
   }
 }
 
-function addChangeLog(description) {
+function addChangeLog(description, noteText) {
+  var cleanNote = String(noteText || "").trim();
   var entry = {
     id: Date.now() + "-" + Math.random().toString(36).slice(2, 7),
     user: currentUser || "Onbekend",
     at: new Date().toISOString(),
-    desc: description
+    desc: description,
+    note: cleanNote
   };
   L.unshift(entry);
   if (L.length > 250) {
     L = L.slice(0, 250);
   }
   readIds.push(entry.id);
+  return entry.id;
+}
+
+function saveTaskWithNote(taskSid) {
+  if (!pendingTaskNote || pendingTaskNote.sid !== taskSid) {
+    return;
+  }
+  var nextStatus = pendingTaskNote.nextStatus;
+  var prevStatus = pendingTaskNote.prevStatus;
+  var noteVal = String(draftNotes[taskSid] || "").trim();
+
+  S[taskSid] = nextStatus;
+  var info = findTaskBySid(taskSid);
+  var label = info ? (info.chapter + " — " + info.task) : taskSid;
+  var newLogId = addChangeLog(label + ": " + statusLabel(prevStatus) + " → " + statusLabel(nextStatus), noteVal);
+
+  delete draftNotes[taskSid];
+  pendingTaskNote = null;
+
+  save();
+  render();
+
+  if (newLogId && view === "w") {
+    var el = document.querySelector('[data-read-id="' + newLogId + '"]');
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }
+}
+
+function cancelTaskNote(taskSid) {
+  if (!pendingTaskNote || pendingTaskNote.sid !== taskSid) {
+    return;
+  }
+  delete draftNotes[taskSid];
+  pendingTaskNote = null;
+  render();
+}
+
+function startEditLogNote(logId) {
+  var item = L.find(function (x) {
+    return x.id === logId;
+  });
+  if (!item) {
+    return;
+  }
+  editingLogId = logId;
+  editingLogDraft = String(item.note || "");
+  render();
+}
+
+function cancelEditLogNote() {
+  editingLogId = "";
+  editingLogDraft = "";
+  render();
+}
+
+function saveEditLogNote(logId) {
+  var item = L.find(function (x) {
+    return x.id === logId;
+  });
+  if (!item) {
+    return;
+  }
+  item.note = String(editingLogDraft || "").trim();
+  editingLogId = "";
+  editingLogDraft = "";
+  save();
+  render();
 }
 
 function saveLocal() {
@@ -1614,13 +1782,27 @@ function chk() {
   }).join("") + '</div>';
   var subTxt = r.done + ' afgerond · ' + r.busy + ' bezig · ' + r.todo + ' te doen';
   var rowsHtml = d.t.map(function (t, j) {
-    var s = S[sid(ch, j)] || "todo";
+    var itemSid = sid(ch, j);
+    var isPending = pendingTaskNote && pendingTaskNote.sid === itemSid;
+    var s = isPending ? pendingTaskNote.nextStatus : (S[itemSid] || "todo");
     var borderCol = s == "done" ? "var(--done)" : (s == "busy" ? "var(--busy)" : "#111");
-    return '<div class="ci ' + (s == "done" ? "done" : "") + '"><select data-s="' + sid(ch, j) + '" style="border-color:' + borderCol + '">' +
+    var currentDraft = isPending ? (draftNotes[itemSid] || "") : "";
+
+    var noteHtml = isPending
+      ? '<div class="note-box">' +
+        '<div class="note-label">Notitie</div>' +
+        '<textarea class="note-textarea" data-note-input="' + esc(itemSid) + '">' + esc(currentDraft) + '</textarea>' +
+        '<div class="note-actions">' +
+        '<button type="button" class="btn-dark" data-save-note="' + esc(itemSid) + '">Opslaan</button>' +
+        '<button type="button" class="btn" data-cancel-note="' + esc(itemSid) + '">Annuleren</button>' +
+        '</div></div>'
+      : '';
+
+    return '<div class="ci ' + (s == "done" ? "done" : "") + '"><select data-s="' + itemSid + '" style="border-color:' + borderCol + '">' +
       '<option value="todo"' + (s == "todo" ? " selected" : "") + '>Te doen</option>' +
       '<option value="busy"' + (s == "busy" ? " selected" : "") + '>Bezig</option>' +
       '<option value="done"' + (s == "done" ? " selected" : "") + '>Afgerond</option>' +
-      '</select><div><span class="no">Taak ' + String(j + 1).padStart(2, "0") + '</span><span class="tx">' + t + '</span></div></div>';
+      '</select><div class="ci-content"><span class="no">Taak ' + String(j + 1).padStart(2, "0") + '</span><span class="tx">' + t + '</span>' + noteHtml + '</div></div>';
   }).join("");
   return '<div class="lay">' + m + '<div class="main"><h2 class="h2">' + d.c + '</h2><p class="sub">' + esc(subTxt) + '</p>' + rowsHtml + '</div></div>';
 }
@@ -1635,9 +1817,32 @@ function wijzigingen() {
   } else {
     html += L.map(function (item) {
       var read = isItemRead(item.id);
+      var hasNote = !!(item.note && String(item.note).trim());
+      var isEditing = editingLogId === item.id;
+
+      var noteSectionHtml = "";
+      if (isEditing) {
+        noteSectionHtml = '<div class="log-edit-box">' +
+          '<div class="note-label">Notitie</div>' +
+          '<textarea class="note-textarea" id="edit-log-textarea">' + esc(editingLogDraft) + '</textarea>' +
+          '<div class="log-edit-bar">' +
+          '<button type="button" class="btn-dark" data-save-edit-log="' + esc(item.id) + '">Opslaan</button>' +
+          '<button type="button" class="btn" data-cancel-edit-log="' + esc(item.id) + '">Annuleren</button>' +
+          '</div></div>';
+      } else if (hasNote) {
+        noteSectionHtml = '<div class="log-note-block">' +
+          '<div class="log-note-title">Notitie</div>' +
+          '<div class="log-note-text">' + esc(item.note) + '</div>' +
+          '<div class="log-edit-bar">' +
+          '<button type="button" class="btn" data-edit-log="' + esc(item.id) + '">Tekst bewerken</button>' +
+          '</div></div>';
+      }
+
       return '<div class="log-item ' + (read ? 'read' : 'unread') + '" data-read-id="' + esc(item.id) + '">' +
         '<div class="log-top"><span>' + (!read ? '<span class="log-badge-new">Nieuw</span>' : '') + esc(item.user) + '</span><span class="log-date">' + esc(fmtTime(item.at)) + '</span></div>' +
-        '<div class="log-desc">' + esc(item.desc) + '</div></div>';
+        '<div class="log-desc">' + esc(item.desc) + '</div>' +
+        noteSectionHtml +
+        '</div>';
     }).join("");
   }
   return html + '<button class="back" data-v="d">← Terug naar dashboard</button>';
@@ -1760,11 +1965,19 @@ function render() {
   } else {
     document.getElementById("v").innerHTML = kc();
   }
+  if (pendingTaskNote) {
+    var noteEl = document.querySelector('[data-note-input="' + pendingTaskNote.sid + '"]');
+    if (noteEl) {
+      noteEl.focus();
+    }
+  }
 }
 
 function go(v) {
   rsArmed = false;
   clearTimeout(rsTimer);
+  pendingTaskNote = null;
+  editingLogId = "";
   view = v;
   if (v == "k" && ar === 0) {
     markErmSeen();
@@ -1837,6 +2050,8 @@ document.getElementById("login-form").addEventListener("submit", function (e) {
 
 document.getElementById("change-user").addEventListener("click", function () {
   currentUser = "";
+  pendingTaskNote = null;
+  editingLogId = "";
   syncLoginState();
   document.getElementById("username-input").value = "";
   document.getElementById("password-input").value = "";
@@ -1857,6 +2072,15 @@ document.addEventListener("input", function (e) {
       el.focus();
       el.setSelectionRange(pos, pos);
     }
+    return;
+  }
+  var noteSid = e.target.dataset.noteInput;
+  if (noteSid) {
+    draftNotes[noteSid] = e.target.value;
+    return;
+  }
+  if (e.target.id === "edit-log-textarea") {
+    editingLogDraft = e.target.value;
   }
 });
 
@@ -1864,6 +2088,21 @@ document.addEventListener("click", function (e) {
   var t = e.target.closest("button");
   if (t) {
     var d = t.dataset;
+    if (d.saveNote) {
+      return saveTaskWithNote(d.saveNote);
+    }
+    if (d.cancelNote) {
+      return cancelTaskNote(d.cancelNote);
+    }
+    if (d.editLog) {
+      return startEditLogNote(d.editLog);
+    }
+    if (d.saveEditLog) {
+      return saveEditLogNote(d.saveEditLog);
+    }
+    if (d.cancelEditLog) {
+      return cancelEditLogNote();
+    }
     if (t.id == "mark-all-read") {
       return markAllLogsRead();
     }
@@ -1885,7 +2124,7 @@ document.addEventListener("click", function (e) {
         try {
           localStorage.removeItem(KEY);
         } catch (err) {}
-        addChangeLog("Alle statussen teruggezet naar 'Te doen'.");
+        addChangeLog("Alle statussen teruggezet naar 'Te doen'.", "");
         save();
         render();
       } else {
@@ -1940,10 +2179,23 @@ document.addEventListener("change", function (e) {
   if (prevStatus === nextStatus) {
     return;
   }
+  if (nextStatus === "busy" || nextStatus === "done") {
+    pendingTaskNote = {
+      sid: s,
+      prevStatus: prevStatus,
+      nextStatus: nextStatus
+    };
+    if (draftNotes[s] === undefined) {
+      draftNotes[s] = "";
+    }
+    render();
+    return;
+  }
+  pendingTaskNote = null;
   S[s] = nextStatus;
   var info = findTaskBySid(s);
   var label = info ? (info.chapter + " — " + info.task) : s;
-  addChangeLog(label + ": " + statusLabel(prevStatus) + " → " + statusLabel(nextStatus));
+  addChangeLog(label + ": " + statusLabel(prevStatus) + " → " + statusLabel(nextStatus), "");
   save();
   render();
 });
