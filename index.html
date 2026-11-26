@@ -904,22 +904,6 @@ var K = [
         "De Uitvoeringsrichtlijn URL 2004 beschrijft hoe kleurhistorisch onderzoek (KHO) wordt uitgevoerd om historische afwerkingslagen, kleurschema's en materiaalgebruik deskundig in kaart te brengen vóór ingrepen plaatsvinden."
       ]
     ]
-  },
-  {
-    id: "ladder",
-    n: "Restauratieladder & afwegingen",
-    b: [
-      [
-        "e",
-        "Volgorde van de restauratieladder",
-        "Bij elke ingreep aan monumentaal schilderwerk volg je de vaste volgorde: 1. Behouden en onderhouden, 2. Repareren en conserveren, 3. Gedeeltelijk vernieuwen en 4. Vervangen als laatste optie."
-      ],
-      [
-        "t",
-        "Vastleggen van beslissingen",
-        "Afwijkingen of keuzes voor herstel versus vervanging worden onderbouwd in het projectdossier (zie hoofdstuk 4.1.1 en 4.1.2) zodat keuzes tijdens uitvoering en bij externe controles aantoonbaar zijn."
-      ]
-    ]
   }
 ];
 
@@ -942,11 +926,8 @@ var ch = 0;
 var ar = 0;
 var ermFilter = "rel";
 var ermQuery = "";
-var taskFilter = "all";
-var taskQuery = "";
 var rsArmed = false;
 var rsTimer = null;
-var syncStatus = "";
 var savingInFlight = false;
 var ermState = {
   loading: false,
@@ -1153,15 +1134,12 @@ function save() {
   lastUpdatedAt = new Date().toISOString();
   saveLocal();
   if (!hasSync()) {
-    syncStatus = "Alleen lokaal opgeslagen";
     return;
   }
   if (!currentUser) {
-    syncStatus = "";
     return;
   }
   savingInFlight = true;
-  syncStatus = "Opslaan op account " + currentUser + "…";
   fetch(ACCOUNT_DATA_API.trim(), {
     method: "POST",
     cache: "no-store",
@@ -1195,14 +1173,12 @@ function save() {
           lastUpdatedAt = resp.updatedAt;
         }
         saveLocal();
-        syncStatus = "Opgeslagen op account " + currentUser;
       }
       savingInFlight = false;
       render();
     })
     .catch(function () {
       savingInFlight = false;
-      syncStatus = "Lokaal opgeslagen — cloud-sync tijdelijk niet bereikbaar";
       render();
     });
 }
@@ -1216,10 +1192,6 @@ function loadAccountData(silent) {
   }
   if (savingInFlight) {
     return Promise.resolve();
-  }
-  if (!silent) {
-    syncStatus = "Accountgegevens ophalen…";
-    render();
   }
   var sep = ACCOUNT_DATA_API.indexOf("?") === -1 ? "?" : "&";
   return fetch(ACCOUNT_DATA_API.trim() + sep + "user=" + encodeURIComponent(currentUser) + "&_t=" + Date.now(), {
@@ -1267,15 +1239,9 @@ function loadAccountData(silent) {
       }
 
       saveLocal();
-      syncStatus = "Account " + currentUser + " gesynchroniseerd";
       render();
     })
-    .catch(function () {
-      if (!silent) {
-        syncStatus = "Lokale accountgegevens actief";
-        render();
-      }
-    });
+    .catch(function () {});
 }
 
 function esc(s) {
@@ -1523,9 +1489,7 @@ function dash() {
     }
   });
   var p = n ? Math.round(T.done / n * 100) : 0;
-  var syncInfo = syncStatus ? '<div class="sub" style="margin-bottom:14px">' + esc(syncStatus) + '</div>' : "";
-  return syncInfo +
-    '<div class="sum"><div><div class="big">' + p + '%</div><div class="mic" style="margin-top:6px">van het handboek afgerond</div></div>' +
+  return '<div class="sum"><div><div class="big">' + p + '%</div><div class="mic" style="margin-top:6px">van het handboek afgerond</div></div>' +
     [["done", "Afgerond"], ["busy", "Bezig"], ["todo", "Te doen"]].map(function (x) {
       return '<div class="it"><b>' + T[x[0]] + '</b><span><i class="dot" style="background:var(--' + x[0] + ')"></i>' + x[1] + '</span></div>';
     }).join("") +
@@ -1546,41 +1510,17 @@ function chk() {
     var q = cnt(i);
     return '<button data-c="' + i + '" class="' + (i == ch ? "on" : "") + '">' + x.c + '<small>' + q.done + ' / ' + x.t.length + ' afgerond</small></button>';
   }).join("") + '</div>';
-  var subTxt = r.done + ' afgerond · ' + r.busy + ' bezig · ' + r.todo + ' te doen' + (syncStatus ? ' · ' + syncStatus : '');
-  var q = taskQuery.trim().toLowerCase();
-  var filtered = d.t.map(function (t, j) {
-    return { t: t, j: j, s: S[sid(ch, j)] || "todo" };
-  }).filter(function (item) {
-    if (taskFilter !== "all" && item.s !== taskFilter) {
-      return false;
-    }
-    if (q && item.t.toLowerCase().indexOf(q) === -1) {
-      return false;
-    }
-    return true;
-  });
-  var filterControls = '<div class="filter-bar">' +
-    '<input type="search" class="search-inp" id="task-search" value="' + esc(taskQuery) + '" placeholder="Zoek binnen ' + esc(d.c) + '…">' +
-    '<div class="tabs">' +
-    '<button type="button" class="btn' + (taskFilter === "all" ? " on" : "") + '" data-tf="all">Alle (' + d.t.length + ')</button>' +
-    '<button type="button" class="btn' + (taskFilter === "todo" ? " on" : "") + '" data-tf="todo">Te doen (' + r.todo + ')</button>' +
-    '<button type="button" class="btn' + (taskFilter === "busy" ? " on" : "") + '" data-tf="busy">Bezig (' + r.busy + ')</button>' +
-    '<button type="button" class="btn' + (taskFilter === "done" ? " on" : "") + '" data-tf="done">Afgerond (' + r.done + ')</button>' +
-    '</div></div>';
-  var rowsHtml = filtered.length
-    ? filtered.map(function (item) {
-      var s = item.s;
-      var j = item.j;
-      var t = item.t;
-      var borderCol = s == "done" ? "var(--done)" : (s == "busy" ? "var(--busy)" : "#111");
-      return '<div class="ci ' + (s == "done" ? "done" : "") + '"><select data-s="' + sid(ch, j) + '" style="border-color:' + borderCol + '">' +
-        '<option value="todo"' + (s == "todo" ? " selected" : "") + '>Te doen</option>' +
-        '<option value="busy"' + (s == "busy" ? " selected" : "") + '>Bezig</option>' +
-        '<option value="done"' + (s == "done" ? " selected" : "") + '>Afgerond</option>' +
-        '</select><div><span class="no">Taak ' + String(j + 1).padStart(2, "0") + '</span><span class="tx">' + t + '</span></div></div>';
-    }).join("")
-    : '<div class="bl read"><p>Geen taken gevonden met dit filter.</p></div>';
-  return '<div class="lay">' + m + '<div class="main"><h2 class="h2">' + d.c + '</h2><p class="sub">' + esc(subTxt) + '</p>' + filterControls + rowsHtml + '</div></div>';
+  var subTxt = r.done + ' afgerond · ' + r.busy + ' bezig · ' + r.todo + ' te doen';
+  var rowsHtml = d.t.map(function (t, j) {
+    var s = S[sid(ch, j)] || "todo";
+    var borderCol = s == "done" ? "var(--done)" : (s == "busy" ? "var(--busy)" : "#111");
+    return '<div class="ci ' + (s == "done" ? "done" : "") + '"><select data-s="' + sid(ch, j) + '" style="border-color:' + borderCol + '">' +
+      '<option value="todo"' + (s == "todo" ? " selected" : "") + '>Te doen</option>' +
+      '<option value="busy"' + (s == "busy" ? " selected" : "") + '>Bezig</option>' +
+      '<option value="done"' + (s == "done" ? " selected" : "") + '>Afgerond</option>' +
+      '</select><div><span class="no">Taak ' + String(j + 1).padStart(2, "0") + '</span><span class="tx">' + t + '</span></div></div>';
+  }).join("");
+  return '<div class="lay">' + m + '<div class="main"><h2 class="h2">' + d.c + '</h2><p class="sub">' + esc(subTxt) + '</p>' + rowsHtml + '</div></div>';
 }
 
 function wijzigingen() {
@@ -1676,6 +1616,9 @@ function ermLive() {
 }
 
 function kc() {
+  if (ar < 0 || ar >= K.length) {
+    ar = 0;
+  }
   var a = K[ar];
   var totalUnreadKc = getTotalUnreadKcCount();
   var m = '<div class="menu">' + K.map(function (x, i) {
@@ -1812,15 +1755,6 @@ document.addEventListener("input", function (e) {
       el.focus();
       el.setSelectionRange(pos, pos);
     }
-  } else if (e.target.id === "task-search") {
-    taskQuery = e.target.value || "";
-    var pos2 = e.target.selectionStart || taskQuery.length;
-    render();
-    var el2 = document.getElementById("task-search");
-    if (el2) {
-      el2.focus();
-      el2.setSelectionRange(pos2, pos2);
-    }
   }
 });
 
@@ -1869,17 +1803,11 @@ document.addEventListener("click", function (e) {
       ermFilter = d.ef;
       return render();
     }
-    if (d.tf) {
-      taskFilter = d.tf;
-      return render();
-    }
     if (d.v) {
       return go(d.v);
     }
     if (d.c !== undefined) {
       ch = +d.c;
-      taskFilter = "all";
-      taskQuery = "";
       return go("a");
     }
     if (d.a !== undefined) {
