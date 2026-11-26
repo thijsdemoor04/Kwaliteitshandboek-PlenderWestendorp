@@ -1623,7 +1623,7 @@ function kc() {
   var totalUnreadKc = getTotalUnreadKcCount();
   var m = '<div class="menu">' + K.map(function (x, i) {
     var u = x.live ? getUnreadRelevantErmCount() : getUnreadKcSectionCount(x);
-    var sub = u > 0 ? '<small>' + u + ' ongelezen</small>' : '<small>Gelezen</small>';
+    var sub = u > 0 ? '<small>' + u + ' ongelezen</small>' : '';
     return '<button data-a="' + i + '" class="' + (i == ar ? "on" : "") + '">' + x.n + sub + '</button>';
   }).join("") + '</div>';
   if (a.live) {
