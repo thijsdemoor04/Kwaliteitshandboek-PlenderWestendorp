@@ -969,7 +969,7 @@ nav button.on{
 </div>
 <script>
 var AUTH_API = "https://kwaliteit-auth.thijsdemoor.workers.dev";
-var ACCOUNT_DATA_API = "https://kwaliteit-account-data.thijsdemoor.workers.dev";
+var ACCOUNT_DATA_API = "https://PLAK_HIER_JOUW_CLOUDWIJZIGINGENGEBRUIKER_URL.workers.dev";
 var ERM_API = "https://erm-updates.thijsdemoor.workers.dev";
 
 var D = [
@@ -1253,7 +1253,7 @@ function markItemRead(id) {
   if (readIds.length > 1500) {
     readIds = readIds.slice(-1500);
   }
-  save();
+  saveLocal();
   render();
 }
 
@@ -1281,7 +1281,7 @@ function markAllKcRead() {
     if (readIds.length > 1500) {
       readIds = readIds.slice(-1500);
     }
-    save();
+    saveLocal();
     render();
   }
 }
@@ -1298,7 +1298,7 @@ function markAllLogsRead() {
     if (readIds.length > 1500) {
       readIds = readIds.slice(-1500);
     }
-    save();
+    saveLocal();
     render();
   }
 }
@@ -1403,6 +1403,9 @@ function hasSync() {
   if (typeof ACCOUNT_DATA_API !== "string") {
     return false;
   }
+  if (ACCOUNT_DATA_API.indexOf("PLAK_HIER") !== -1) {
+    return false;
+  }
   return /^https?:\/\//i.test(ACCOUNT_DATA_API.trim());
 }
 
@@ -1423,7 +1426,6 @@ function save() {
     body: JSON.stringify({
       user: currentUser,
       statuses: S,
-      readIds: readIds,
       logs: L,
       updatedAt: lastUpdatedAt
     })
@@ -1435,19 +1437,8 @@ function save() {
       return res.json();
     })
     .then(function (resp) {
-      if (resp && resp.ok) {
-        if (resp.statuses && typeof resp.statuses === "object") {
-          S = resp.statuses;
-        }
-        if (Array.isArray(resp.readIds)) {
-          readIds = resp.readIds;
-        }
-        if (Array.isArray(resp.logs)) {
-          L = resp.logs;
-        }
-        if (resp.updatedAt) {
-          lastUpdatedAt = resp.updatedAt;
-        }
+      if (resp && resp.ok && resp.updatedAt) {
+        lastUpdatedAt = resp.updatedAt;
         saveLocal();
       }
       savingInFlight = false;
@@ -1459,7 +1450,7 @@ function save() {
     });
 }
 
-function loadAccountData(silent) {
+function loadAccountData(forceRender) {
   if (!hasSync()) {
     return Promise.resolve();
   }
@@ -1470,7 +1461,7 @@ function loadAccountData(silent) {
     return Promise.resolve();
   }
   var sep = ACCOUNT_DATA_API.indexOf("?") === -1 ? "?" : "&";
-  return fetch(ACCOUNT_DATA_API.trim() + sep + "user=" + encodeURIComponent(currentUser) + "&_t=" + Date.now(), {
+  return fetch(ACCOUNT_DATA_API.trim() + sep + "_t=" + Date.now(), {
     cache: "no-store"
   })
     .then(function (res) {
@@ -1480,42 +1471,32 @@ function loadAccountData(silent) {
       return res.json();
     })
     .then(function (payload) {
-      if (savingInFlight || !payload || !payload.ok) {
+      if (savingInFlight || !payload || typeof payload !== "object") {
         return;
       }
       var remoteStatuses = (payload.statuses && typeof payload.statuses === "object") ? payload.statuses : {};
-      var remoteRead = Array.isArray(payload.readIds) ? payload.readIds : [];
       var remoteLogs = Array.isArray(payload.logs) ? payload.logs : [];
       var remoteTime = payload.updatedAt || "";
 
       var localMs = lastUpdatedAt ? Date.parse(lastUpdatedAt) : 0;
       var remoteMs = remoteTime ? Date.parse(remoteTime) : 0;
 
+      var changed = false;
       if (!localMs || !remoteMs || remoteMs >= localMs) {
-        S = remoteStatuses;
-        var mergedRead = remoteRead.slice();
-        readIds.forEach(function (id) {
-          if (mergedRead.indexOf(id) === -1) {
-            mergedRead.push(id);
-          }
-        });
-        readIds = mergedRead;
-        if (remoteLogs.length > 0 || !L.length) {
-          L = remoteLogs;
+        if (JSON.stringify(S) !== JSON.stringify(remoteStatuses) || JSON.stringify(L) !== JSON.stringify(remoteLogs)) {
+          changed = true;
         }
+        S = remoteStatuses;
+        L = remoteLogs;
         if (remoteTime) {
           lastUpdatedAt = remoteTime;
         }
-      } else {
-        remoteRead.forEach(function (id) {
-          if (readIds.indexOf(id) === -1) {
-            readIds.push(id);
-          }
-        });
       }
 
       saveLocal();
-      render();
+      if (changed || forceRender) {
+        render();
+      }
     })
     .catch(function () {});
 }
@@ -1600,7 +1581,7 @@ function setUserName(name) {
   currentUser = clean;
   syncLoginState();
   render();
-  loadAccountData(false);
+  loadAccountData(true);
 }
 
 function checkUpdates(data) {
@@ -1780,7 +1761,7 @@ function chk() {
   var d = D[ch];
   var m = '<div class="menu">' + D.map(function (x, i) {
     var q = cnt(i);
-    return '<button data-c="' + i + '" class="' + (i == ch ? "on" : "") + '">' + x.c + '<small>' + q.done + ' / ' + x.t.length + ' afgerond</small></button>';
+    return '<button data-c="' + i + '" class="' + (i == ch ? "on" : "") + '">' + x.c + '<small>' + q.done + ' / ' + q.t.length + ' afgerond</small></button>';
   }).join("") + '</div>';
   var rowsHtml = d.t.map(function (t, j) {
     var itemSid = sid(ch, j);
@@ -2111,7 +2092,7 @@ document.addEventListener("click", function (e) {
       return go("d");
     }
     if (t.id == "erm-ref") {
-      loadAccountData(false);
+      loadAccountData(true);
       return loadErm(true);
     }
     if (t.id == "rs") {
@@ -2204,10 +2185,10 @@ loadErm(false);
 
 if (hasSync()) {
   setInterval(function () {
-    if (document.visibilityState === "visible" && currentUser) {
-      loadAccountData(true);
+    if (document.visibilityState === "visible" && currentUser && !pendingTaskNote && !editingLogId) {
+      loadAccountData(false);
     }
-  }, 15000);
+  }, 5000);
 }
 
 if (isConfigured()) {
