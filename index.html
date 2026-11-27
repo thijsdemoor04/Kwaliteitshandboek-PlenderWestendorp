@@ -822,7 +822,8 @@ nav button.on{
   text-transform:uppercase;
   color:#111;
 }
-.login-form input{
+.login-form input[type="text"],
+.login-form input[type="password"]{
   padding:11px 14px;
   border:1px solid var(--line);
   border-radius:9px;
@@ -831,9 +832,61 @@ nav button.on{
   font-size:16px;
   outline:none;
 }
-.login-form input:focus{
+.login-form input[type="text"]:focus,
+.login-form input[type="password"]:focus{
   border-color:#111;
   box-shadow:0 0 0 2px rgba(17,17,17,.08);
+}
+.totp-box{
+  display:none;
+  flex-direction:column;
+  gap:10px;
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--surface-elev);
+}
+.totp-check{
+  display:flex !important;
+  align-items:center;
+  gap:10px;
+  text-transform:none !important;
+  letter-spacing:0 !important;
+  font-size:14px !important;
+  font-weight:600 !important;
+  cursor:pointer;
+}
+.totp-panel{
+  display:none;
+  flex-direction:column;
+  gap:10px;
+}
+.totp-qr-row{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  flex-wrap:wrap;
+}
+.totp-qr-canvas{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:6px;
+}
+.totp-side{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  flex:1;
+  min-width:160px;
+}
+.totp-secret{
+  font-size:13px;
+  word-break:break-all;
+  background:#fff;
+  padding:8px 10px;
+  border-radius:7px;
+  border:1px solid var(--faint);
 }
 .login-err{
   color:#b00020;
@@ -982,8 +1035,38 @@ nav button.on{
     <form class="login-form" id="login-form">
       <label for="username-input">Gebruikersnaam</label>
       <input id="username-input" type="text" autocomplete="username" placeholder="Vul gebruikersnaam in" required>
+
       <label for="password-input">Wachtwoord</label>
       <input id="password-input" type="password" autocomplete="current-password" placeholder="Vul wachtwoord in" required>
+
+      <div id="login-totp-box" style="display:none;flex-direction:column;gap:8px;">
+        <label for="login-totp-input">Authenticatorcode (6 cijfers, indien ingesteld)</label>
+        <input id="login-totp-input" type="text" inputmode="numeric" pattern="[0-9 ]*" maxlength="8" autocomplete="one-time-code" placeholder="Bijv. 123456">
+      </div>
+
+      <div id="register-totp-section" class="totp-box">
+        <label class="totp-check">
+          <input type="checkbox" id="enable-totp-checkbox">
+          <span>Authenticator-code instellen (Google Authenticator / iPhone)</span>
+        </label>
+
+        <div id="totp-setup-panel" class="totp-panel">
+          <p id="totp-status-text" style="font-size:13.5px;color:var(--muted);">
+            Scan deze QR-code met je authenticator-app en vul daarna de 6-cijferige code in.
+          </p>
+          <div class="totp-qr-row">
+            <canvas id="totp-qr-canvas" width="184" height="184" class="totp-qr-canvas"></canvas>
+            <div class="totp-side">
+              <span style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);">Handmatige sleutel</span>
+              <code id="totp-secret-text" class="totp-secret">—</code>
+              <button type="button" class="btn" id="regen-totp-btn">Nieuwe QR-code</button>
+            </div>
+          </div>
+          <label for="register-totp-input">Bevestig met 6-cijferige code uit je app</label>
+          <input id="register-totp-input" type="text" inputmode="numeric" pattern="[0-9 ]*" maxlength="8" autocomplete="one-time-code" placeholder="6-cijferige code">
+        </div>
+      </div>
+
       <div class="login-err" id="login-error"></div>
       <button type="submit" class="login-submit" id="login-submit-btn">Inloggen</button>
     </form>
@@ -997,7 +1080,7 @@ nav button.on{
 </div>
 <script>
 var HANDBOOK_WORKER_API = "https://kwaliteit-account-data.thijsdemoor.workers.dev";
-var AUTH_API = HANDBOOK_WORKER_API;
+var AUTH_API = "https://kwaliteit-auth-code.thijsdemoor.workers.dev";
 var ACCOUNT_DATA_API = HANDBOOK_WORKER_API;
 var ERM_API = "https://erm-updates.thijsdemoor.workers.dev";
 var SHARED_SCOPE = "shared_handbook_v1";
@@ -1148,6 +1231,8 @@ var S = {};
 var L = [];
 var readByUser = {};
 var currentUser = "";
+var sessionToken = "";
+var totpChallenge = null;
 var authMode = "login";
 var lastUpdatedAt = "";
 var view = "d";
@@ -1523,14 +1608,19 @@ function save(opts) {
     return;
   }
   savingInFlight = true;
+  var headers = { "Content-Type": "application/json" };
+  if (sessionToken) {
+    headers["Authorization"] = "Bearer " + sessionToken;
+  }
   fetch(ACCOUNT_DATA_API.trim(), {
     method: "POST",
     cache: "no-store",
-    headers: { "Content-Type": "application/json" },
+    headers: headers,
     body: JSON.stringify({
       scope: SHARED_SCOPE,
       user: currentUser,
       actor: currentUser,
+      sessionToken: sessionToken,
       reset: isReset,
       statuses: S,
       readByUser: readByUser,
@@ -1585,7 +1675,12 @@ function loadAccountData(forceRender) {
     "&actor=" + encodeURIComponent(currentUser) +
     "&_t=" + Date.now();
 
-  return fetch(url, { cache: "no-store" })
+  var headers = {};
+  if (sessionToken) {
+    headers["Authorization"] = "Bearer " + sessionToken;
+  }
+
+  return fetch(url, { cache: "no-store", headers: headers })
     .then(function (res) {
       if (!res.ok) {
         throw new Error("HTTP " + res.status);
@@ -1707,7 +1802,331 @@ function setAuthMode(mode) {
     "autocomplete",
     mode === "login" ? "current-password" : "new-password"
   );
+
+  var regSec = document.getElementById("register-totp-section");
+  var loginTotpBox = document.getElementById("login-totp-box");
+  regSec.style.display = mode === "register" ? "flex" : "none";
+  loginTotpBox.style.display = mode === "login" ? "flex" : "none";
+
   document.getElementById("login-error").textContent = "";
+
+  if (mode === "register") {
+    var cb = document.getElementById("enable-totp-checkbox");
+    if (cb && cb.checked) {
+      requestNewTotpQr();
+    }
+  }
+}
+
+function requestNewTotpQr() {
+  var rawUsername = String(document.getElementById("username-input").value || "").trim();
+  var username = rawUsername || "PlenderWestendorp";
+  var statusEl = document.getElementById("totp-status-text");
+  var secretEl = document.getElementById("totp-secret-text");
+  var regenBtn = document.getElementById("regen-totp-btn");
+
+  if (statusEl) statusEl.textContent = "Nieuwe unieke QR-code genereren…";
+  if (secretEl) secretEl.textContent = "Bezig…";
+  if (regenBtn) regenBtn.disabled = true;
+
+  return fetch(AUTH_API, {
+    method: "POST",
+    cache: "no-store",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "init_totp",
+      username: username,
+      issuer: "PlenderWestendorp"
+    })
+  })
+    .then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (data) {
+        return { ok: res.ok, data: data };
+      });
+    })
+    .then(function (result) {
+      if (regenBtn) regenBtn.disabled = false;
+      if (!result.ok || !result.data || !result.data.ok) {
+        if (statusEl) statusEl.textContent = (result.data && result.data.error) || "Kon geen QR-code genereren.";
+        return;
+      }
+      totpChallenge = {
+        challengeId: result.data.challengeId,
+        secret: result.data.secret,
+        otpauthUri: result.data.otpauthUri
+      };
+      if (secretEl) secretEl.textContent = result.data.secret;
+      if (statusEl) {
+        statusEl.textContent = "Scan deze QR-code met je authenticator-app en vul daarna de 6-cijferige code in.";
+      }
+      drawQrCodeToCanvas("totp-qr-canvas", result.data.otpauthUri);
+    })
+    .catch(function () {
+      if (regenBtn) regenBtn.disabled = false;
+      if (statusEl) statusEl.textContent = "Geen verbinding met authenticator-service.";
+    });
+}
+
+function drawQrCodeToCanvas(canvasId, text) {
+  var canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  var ctx = canvas.getContext("2d");
+  var modules = createQrMatrix(String(text || ""));
+  var count = modules.length;
+  var size = canvas.width;
+  var quiet = 2;
+  var cell = Math.max(2, Math.floor(size / (count + quiet * 2)));
+  var offset = Math.floor((size - count * cell) / 2);
+
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = "#111111";
+
+  for (var r = 0; r < count; r++) {
+    for (var c = 0; c < count; c++) {
+      if (modules[r][c]) {
+        ctx.fillRect(offset + c * cell, offset + r * cell, cell, cell);
+      }
+    }
+  }
+}
+
+function createQrMatrix(dataStr) {
+  var bytes = new TextEncoder().encode(dataStr);
+  var specs = [
+    null,
+    { n: 21, cap: 17, ec: 7, b1: 19 },
+    { n: 25, cap: 32, ec: 10, b1: 34 },
+    { n: 29, cap: 53, ec: 15, b1: 55 },
+    { n: 33, cap: 78, ec: 20, b1: 80 },
+    { n: 37, cap: 106, ec: 26, b1: 108 },
+    { n: 41, cap: 134, ec: 18, b1: 68 },
+    { n: 45, cap: 154, ec: 22, b1: 78 },
+    { n: 49, cap: 192, ec: 30, b1: 97 },
+    { n: 53, cap: 230, ec: 36, b1: 116 },
+    { n: 57, cap: 271, ec: 44, b1: 68 }
+  ];
+
+  var ver = 1;
+  while (ver < specs.length - 1 && bytes.length > specs[ver].cap) {
+    ver++;
+  }
+  var spec = specs[ver];
+  var size = spec.n;
+
+  var bits = [];
+  function pushBits(val, len) {
+    for (var i = len - 1; i >= 0; i--) {
+      bits.push((val >>> i) & 1);
+    }
+  }
+
+  pushBits(4, 4);
+  pushBits(bytes.length, ver >= 10 ? 16 : 8);
+  for (var i = 0; i < bytes.length; i++) {
+    pushBits(bytes[i], 8);
+  }
+
+  var totalDataBytes = spec.b1 - spec.ec;
+  var totalDataBits = totalDataBytes * 8;
+  var termLen = Math.min(4, Math.max(0, totalDataBits - bits.length));
+  pushBits(0, termLen);
+  while (bits.length % 8 !== 0) bits.push(0);
+
+  var padToggle = 0;
+  while (bits.length < totalDataBits) {
+    pushBits(padToggle === 0 ? 0xec : 0x11, 8);
+    padToggle ^= 1;
+  }
+
+  var dataCodewords = [];
+  for (var b = 0; b < totalDataBytes; b++) {
+    var byteVal = 0;
+    for (var k = 0; k < 8; k++) {
+      byteVal = (byteVal << 1) | (bits[b * 8 + k] || 0);
+    }
+    dataCodewords.push(byteVal);
+  }
+
+  var numBlocks = 1;
+  if (ver >= 6 && ver <= 9) numBlocks = 2;
+  if (ver === 10) numBlocks = 4;
+
+  var baseDataLen = Math.floor(totalDataBytes / numBlocks);
+  var extraDataBlocks = totalDataBytes % numBlocks;
+  var ecPerBlock = Math.floor(spec.ec / numBlocks);
+
+  var dataBlocks = [];
+  var ecBlocks = [];
+  var cursor = 0;
+  for (var blk = 0; blk < numBlocks; blk++) {
+    var dLen = baseDataLen + (blk >= numBlocks - extraDataBlocks ? 1 : 0);
+    var slice = dataCodewords.slice(cursor, cursor + dLen);
+    cursor += dLen;
+    dataBlocks.push(slice);
+    ecBlocks.push(rsEncode(slice, ecPerBlock));
+  }
+
+  var interleaved = [];
+  var maxD = Math.max.apply(null, dataBlocks.map(function (x) { return x.length; }));
+  for (var rIdx = 0; rIdx < maxD; rIdx++) {
+    for (var blk2 = 0; blk2 < numBlocks; blk2++) {
+      if (rIdx < dataBlocks[blk2].length) interleaved.push(dataBlocks[blk2][rIdx]);
+    }
+  }
+  for (var eIdx = 0; eIdx < ecPerBlock; eIdx++) {
+    for (var blk3 = 0; blk3 < numBlocks; blk3++) {
+      if (eIdx < ecBlocks[blk3].length) interleaved.push(ecBlocks[blk3][eIdx]);
+    }
+  }
+
+  var matrix = Array.from({ length: size }, function () {
+    return Array(size).fill(null);
+  });
+  var reserved = Array.from({ length: size }, function () {
+    return Array(size).fill(false);
+  });
+
+  function placeFinder(top, left) {
+    for (var r = -1; r <= 7; r++) {
+      for (var c = -1; c <= 7; c++) {
+        var rr = top + r;
+        var cc = left + c;
+        if (rr < 0 || rr >= size || cc < 0 || cc >= size) continue;
+        var inBox = r >= 0 && r <= 6 && c >= 0 && c <= 6;
+        var border = r === 0 || r === 6 || c === 0 || c === 6;
+        var center = r >= 2 && r <= 4 && c >= 2 && c <= 4;
+        matrix[rr][cc] = inBox && (border || center);
+        reserved[rr][cc] = true;
+      }
+    }
+  }
+
+  placeFinder(0, 0);
+  placeFinder(0, size - 7);
+  placeFinder(size - 7, 0);
+
+  for (var t = 8; t < size - 8; t++) {
+    var val = t % 2 === 0;
+    if (!reserved[6][t]) {
+      matrix[6][t] = val;
+      reserved[6][t] = true;
+    }
+    if (!reserved[t][6]) {
+      matrix[t][6] = val;
+      reserved[t][6] = true;
+    }
+  }
+
+  if (ver >= 2) {
+    var alignPos = ver === 2 ? [18] : ver === 3 ? [22] : ver === 4 ? [26] : ver === 5 ? [30] : ver === 6 ? [34] : ver === 7 ? [22, 38] : ver === 8 ? [24, 42] : ver === 9 ? [26, 46] : [28, 50];
+    alignPos.forEach(function (ay) {
+      alignPos.forEach(function (ax) {
+        if (reserved[ay][ax]) return;
+        for (var dr = -2; dr <= 2; dr++) {
+          for (var dc = -2; dc <= 2; dc++) {
+            var isDark = Math.abs(dr) === 2 || Math.abs(dc) === 2 || (dr === 0 && dc === 0);
+            matrix[ay + dr][ax + dc] = isDark;
+            reserved[ay + dr][ax + dc] = true;
+          }
+        }
+      });
+    });
+  }
+
+  matrix[size - 8][8] = true;
+  reserved[size - 8][8] = true;
+
+  for (var res = 0; res < 9; res++) {
+    if (res < size) {
+      reserved[8][res] = true;
+      reserved[res][8] = true;
+    }
+    if (size - 1 - res >= 0) {
+      reserved[8][size - 1 - res] = true;
+      reserved[size - 1 - res][8] = true;
+    }
+  }
+
+  var bitIdx = 0;
+  var totalBits = interleaved.length * 8;
+  var upward = true;
+  for (var col = size - 1; col >= 1; col -= 2) {
+    if (col === 6) col = 5;
+    for (var step = 0; step < size; step++) {
+      var row = upward ? size - 1 - step : step;
+      for (var cOff = 0; cOff < 2; cOff++) {
+        var cPos = col - cOff;
+        if (!reserved[row][cPos]) {
+          var bit = 0;
+          if (bitIdx < totalBits) {
+            bit = (interleaved[Math.floor(bitIdx / 8)] >>> (7 - (bitIdx % 8))) & 1;
+            bitIdx++;
+          }
+          var maskCond = (row + cPos) % 2 === 0;
+          matrix[row][cPos] = maskCond ? bit === 0 : bit === 1;
+        }
+      }
+    }
+    upward = !upward;
+  }
+
+  var fmtBits = [1,1,1,0,1,1,1,1,1,0,1,0,0,1,0];
+  var topLeftCoords = [
+    [0,8],[1,8],[2,8],[3,8],[4,8],[5,8],[7,8],[8,8],[8,7],[8,5],[8,4],[8,3],[8,2],[8,1],[8,0]
+  ];
+  for (var f = 0; f < 15; f++) {
+    var dBit = fmtBits[f] === 1;
+    var tl = topLeftCoords[f];
+    matrix[tl[0]][tl[1]] = dBit;
+    if (f < 8) {
+      matrix[8][size - 1 - f] = dBit;
+    } else {
+      matrix[size - 15 + f][8] = dBit;
+    }
+  }
+
+  return matrix;
+}
+
+function rsEncode(data, ecLen) {
+  var gfExp = new Array(512);
+  var gfLog = new Array(256);
+  var x = 1;
+  for (var i = 0; i < 255; i++) {
+    gfExp[i] = x;
+    gfLog[x] = i;
+    x <<= 1;
+    if (x & 0x100) x ^= 0x11d;
+  }
+  for (var j = 255; j < 512; j++) gfExp[j] = gfExp[j - 255];
+
+  function gfMul(a, b) {
+    if (a === 0 || b === 0) return 0;
+    return gfExp[(gfLog[a] + gfLog[b]) % 255];
+  }
+
+  var gen = [1];
+  for (var step = 0; step < ecLen; step++) {
+    var nextGen = new Array(gen.length + 1).fill(0);
+    var factor = gfExp[step];
+    for (var g = 0; g < gen.length; g++) {
+      nextGen[g] ^= gen[g];
+      nextGen[g + 1] ^= gfMul(gen[g], factor);
+    }
+    gen = nextGen;
+  }
+
+  var msg = data.concat(new Array(ecLen).fill(0));
+  for (var d = 0; d < data.length; d++) {
+    var coef = msg[d];
+    if (coef !== 0) {
+      for (var k = 1; k < gen.length; k++) {
+        msg[d + k] ^= gfMul(gen[k], coef);
+      }
+    }
+  }
+  return msg.slice(data.length);
 }
 
 function syncLoginState() {
@@ -2132,15 +2551,36 @@ document.getElementById("mode-register").addEventListener("click", function () {
   setAuthMode("register");
 });
 
+document.getElementById("enable-totp-checkbox").addEventListener("change", function (e) {
+  var panel = document.getElementById("totp-setup-panel");
+  if (e.target.checked) {
+    panel.style.display = "flex";
+    requestNewTotpQr();
+  } else {
+    panel.style.display = "none";
+    totpChallenge = null;
+  }
+});
+
+document.getElementById("regen-totp-btn").addEventListener("click", function () {
+  requestNewTotpQr();
+});
+
 document.getElementById("login-form").addEventListener("submit", function (e) {
   e.preventDefault();
   var userInp = document.getElementById("username-input");
   var passInp = document.getElementById("password-input");
+  var regTotpInp = document.getElementById("register-totp-input");
+  var loginTotpInp = document.getElementById("login-totp-input");
+  var loginTotpBox = document.getElementById("login-totp-box");
   var errEl = document.getElementById("login-error");
   var btn = document.getElementById("login-submit-btn");
 
   var username = String(userInp.value || "").trim();
   var password = String(passInp.value || "");
+  var enableTotp = authMode === "register" && document.getElementById("enable-totp-checkbox").checked;
+  var regTotpCode = String(regTotpInp.value || "").trim();
+  var loginTotpCode = String(loginTotpInp.value || "").trim();
 
   if (!username || !password) {
     errEl.textContent = "Vul zowel je gebruikersnaam als wachtwoord in.";
@@ -2151,15 +2591,29 @@ document.getElementById("login-form").addEventListener("submit", function (e) {
   btn.disabled = true;
   btn.textContent = "Bezig met controleren…";
 
+  var payload = authMode === "register"
+    ? {
+        mode: "register",
+        action: "register",
+        username: username,
+        password: password,
+        enableTotp: enableTotp,
+        challengeId: enableTotp && totpChallenge ? totpChallenge.challengeId : "",
+        totpCode: enableTotp ? regTotpCode : ""
+      }
+    : {
+        mode: "login",
+        action: "login",
+        username: username,
+        password: password,
+        totpCode: loginTotpCode
+      };
+
   fetch(AUTH_API, {
     method: "POST",
     cache: "no-store",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      mode: authMode,
-      username: username,
-      password: password
-    })
+    body: JSON.stringify(payload)
   })
     .then(function (res) {
       return res.json().catch(function () {
@@ -2172,10 +2626,18 @@ document.getElementById("login-form").addEventListener("submit", function (e) {
       btn.disabled = false;
       setAuthMode(authMode);
       if (!result.ok || !result.data || !result.data.ok) {
+        if (result.data && result.data.totpRequired && authMode === "login") {
+          loginTotpBox.style.display = "flex";
+          loginTotpInp.focus();
+        }
         errEl.textContent = (result.data && result.data.error) || "Inloggen mislukt.";
         return;
       }
+      sessionToken = result.data.sessionToken || "";
+      totpChallenge = null;
       passInp.value = "";
+      regTotpInp.value = "";
+      loginTotpInp.value = "";
       setUserName(result.data.username);
     })
     .catch(function () {
@@ -2187,11 +2649,17 @@ document.getElementById("login-form").addEventListener("submit", function (e) {
 
 document.getElementById("change-user").addEventListener("click", function () {
   currentUser = "";
+  sessionToken = "";
+  totpChallenge = null;
   pendingTaskNote = null;
   editingLogId = "";
   syncLoginState();
   document.getElementById("username-input").value = "";
   document.getElementById("password-input").value = "";
+  document.getElementById("register-totp-input").value = "";
+  document.getElementById("login-totp-input").value = "";
+  document.getElementById("enable-totp-checkbox").checked = false;
+  document.getElementById("totp-setup-panel").style.display = "none";
   document.getElementById("login-error").textContent = "";
   setAuthMode("login");
   setTimeout(function () {
