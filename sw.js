@@ -1,4 +1,4 @@
-const CACHE_NAME = "kwaliteitshandboek-v39";
+const CACHE_NAME = "kwaliteitshandboek-v40";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icoon.png"];
 
 self.addEventListener("install", (event) => {
