@@ -846,18 +846,8 @@ nav button.on{
   border-radius:10px;
   background:var(--surface-elev);
 }
-.totp-check{
-  display:flex !important;
-  align-items:center;
-  gap:10px;
-  text-transform:none !important;
-  letter-spacing:0 !important;
-  font-size:14px !important;
-  font-weight:600 !important;
-  cursor:pointer;
-}
 .totp-panel{
-  display:none;
+  display:flex;
   flex-direction:column;
   gap:12px;
 }
@@ -1057,13 +1047,12 @@ nav button.on{
         <input id="login-totp-input" type="text" inputmode="numeric" pattern="[0-9 ]*" maxlength="8" autocomplete="one-time-code" placeholder="Bijv. 123456">
       </div>
 
-      <div id="register-totp-section" class="totp-box">
-        <label class="totp-check">
-          <input type="checkbox" id="enable-totp-checkbox">
-          <span>Authenticator-code instellen (Google Authenticator / iPhone)</span>
-        </label>
+      <div id="register-totp-section" class="totp-box" style="display:none;">
+        <div style="font-size:13.5px;font-weight:700;color:#111;">
+          Authenticator verplicht (Google Authenticator / iPhone / Samsung)
+        </div>
 
-        <div id="totp-setup-panel" class="totp-panel">
+        <div id="totp-setup-panel" class="totp-panel" style="display:flex;">
           <p id="totp-status-text" style="font-size:13.5px;color:var(--muted);">
             Scan deze QR-code met je authenticator-app en vul daarna de 6-cijferige code in.
           </p>
@@ -1077,8 +1066,8 @@ nav button.on{
               <button type="button" class="btn" id="regen-totp-btn">Nieuwe QR-code</button>
             </div>
           </div>
-          <label for="register-totp-input">Bevestig met 6-cijferige code uit je app</label>
-          <input id="register-totp-input" type="text" inputmode="numeric" pattern="[0-9 ]*" maxlength="8" autocomplete="one-time-code" placeholder="6-cijferige code">
+          <label for="register-totp-input">Bevestig met 6-cijferige code uit je app (verplicht)</label>
+          <input id="register-totp-input" type="text" inputmode="numeric" pattern="[0-9 ]*" maxlength="8" autocomplete="one-time-code" placeholder="6-cijferige code" required>
         </div>
       </div>
 
@@ -1820,16 +1809,17 @@ function setAuthMode(mode) {
 
   var regSec = document.getElementById("register-totp-section");
   var loginTotpBox = document.getElementById("login-totp-box");
+  var regTotpInp = document.getElementById("register-totp-input");
   regSec.style.display = mode === "register" ? "flex" : "none";
   loginTotpBox.style.display = mode === "login" ? "flex" : "none";
+  if (regTotpInp) {
+    regTotpInp.required = mode === "register";
+  }
 
   document.getElementById("login-error").textContent = "";
 
   if (mode === "register") {
-    var cb = document.getElementById("enable-totp-checkbox");
-    if (cb && cb.checked) {
-      requestNewTotpQr();
-    }
+    requestNewTotpQr();
   }
 }
 
@@ -1871,7 +1861,7 @@ function drawQrCodeToCanvas(canvasId, text) {
 
 function requestNewTotpQr() {
   var rawUsername = String(document.getElementById("username-input").value || "").trim();
-  var username = rawUsername || "Monumentaal";
+  var username = rawUsername || "Monumentaal schilderwerk";
   var statusEl = document.getElementById("totp-status-text");
   var secretEl = document.getElementById("totp-secret-text");
   var regenBtn = document.getElementById("regen-totp-btn");
@@ -1895,7 +1885,7 @@ function requestNewTotpQr() {
     body: JSON.stringify({
       action: "init_totp",
       username: username,
-      issuer: "Monumentaal",
+      issuer: "Monumentaal schilderwerk",
       nonce: nonce
     })
   })
@@ -2353,18 +2343,6 @@ document.getElementById("mode-register").addEventListener("click", function () {
   setAuthMode("register");
 });
 
-document.getElementById("enable-totp-checkbox").addEventListener("change", function (e) {
-  var panel = document.getElementById("totp-setup-panel");
-  if (e.target.checked) {
-    panel.style.display = "flex";
-    requestNewTotpQr();
-  } else {
-    panel.style.display = "none";
-    totpChallenge = null;
-    clearQrCanvas("totp-qr-canvas");
-  }
-});
-
 document.getElementById("regen-totp-btn").addEventListener("click", function () {
   requestNewTotpQr();
 });
@@ -2381,13 +2359,24 @@ document.getElementById("login-form").addEventListener("submit", function (e) {
 
   var username = String(userInp.value || "").trim();
   var password = String(passInp.value || "");
-  var enableTotp = authMode === "register" && document.getElementById("enable-totp-checkbox").checked;
-  var regTotpCode = String(regTotpInp.value || "").trim();
-  var loginTotpCode = String(loginTotpInp.value || "").trim();
+  var regTotpCode = String(regTotpInp.value || "").replace(/\s+/g, "");
+  var loginTotpCode = String(loginTotpInp.value || "").replace(/\s+/g, "");
 
   if (!username || !password) {
     errEl.textContent = "Vul zowel je gebruikersnaam als wachtwoord in.";
     return;
+  }
+
+  if (authMode === "register") {
+    if (!totpChallenge || !totpChallenge.challengeId) {
+      errEl.textContent = "Wacht tot de QR-code is geladen of klik op 'Nieuwe QR-code'.";
+      return;
+    }
+    if (!/^\d{6}$/.test(regTotpCode)) {
+      errEl.textContent = "Vul de 6-cijferige code uit je authenticator-app in (verplicht).";
+      regTotpInp.focus();
+      return;
+    }
   }
 
   errEl.textContent = "";
@@ -2400,9 +2389,9 @@ document.getElementById("login-form").addEventListener("submit", function (e) {
         action: "register",
         username: username,
         password: password,
-        enableTotp: enableTotp,
-        challengeId: enableTotp && totpChallenge ? totpChallenge.challengeId : "",
-        totpCode: enableTotp ? regTotpCode : ""
+        enableTotp: true,
+        challengeId: totpChallenge.challengeId,
+        totpCode: regTotpCode
       }
     : {
         mode: "login",
@@ -2462,8 +2451,6 @@ document.getElementById("change-user").addEventListener("click", function () {
   document.getElementById("password-input").value = "";
   document.getElementById("register-totp-input").value = "";
   document.getElementById("login-totp-input").value = "";
-  document.getElementById("enable-totp-checkbox").checked = false;
-  document.getElementById("totp-setup-panel").style.display = "none";
   document.getElementById("login-error").textContent = "";
   setAuthMode("login");
   setTimeout(function () {
